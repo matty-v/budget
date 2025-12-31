@@ -9,8 +9,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev          # Start Vite dev server (frontend on port 5173)
 node server/plaid-server.cjs  # Start Plaid backend server (port 3001)
 
-# Build & Lint
+# Build & Deploy
 npm run build        # TypeScript check + Vite production build
+npm run deploy       # Build and deploy to GCS bucket
 npm run lint         # ESLint
 npm run preview      # Preview production build
 ```

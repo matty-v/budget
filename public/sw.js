@@ -1,22 +1,11 @@
-const CACHE_NAME = 'budget-app-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.svg',
-];
+const CACHE_NAME = 'budget-app-v3';
 
-// Install event - cache static assets
+// Install event - skip waiting to activate immediately
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    })
-  );
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and claim clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -25,9 +14,8 @@ self.addEventListener('activate', (event) => {
           .filter((name) => name !== CACHE_NAME)
           .map((name) => caches.delete(name))
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 // Fetch event - network first, fallback to cache
@@ -37,16 +25,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip API requests (let them fail naturally if offline)
-  if (event.request.url.includes('sheetsapi')) {
+  // Skip API requests
+  if (event.request.url.includes('sheetsapi') || event.request.url.includes('plaid')) {
+    return;
+  }
+
+  // Skip chrome-extension and other non-http requests
+  if (!event.request.url.startsWith('http')) {
     return;
   }
 
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Cache successful responses
-        if (response.status === 200) {
+        // Only cache successful same-origin responses
+        if (response.status === 200 && response.type === 'basic') {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseClone);
@@ -55,14 +48,14 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(() => {
-        // Fallback to cache
+        // Fallback to cache on network failure
         return caches.match(event.request).then((cachedResponse) => {
           if (cachedResponse) {
             return cachedResponse;
           }
-          // Return offline page for navigation requests
+          // For navigation requests, return cached index.html
           if (event.request.mode === 'navigate') {
-            return caches.match('/');
+            return caches.match(new Request(self.registration.scope + 'index.html'));
           }
           return new Response('Offline', { status: 503 });
         });

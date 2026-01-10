@@ -1,0 +1,64 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to GCS
+        run: |
+          BUCKET_NAME="voget-budget-app"
+
+          # Upload hashed assets with long cache (1 year)
+          gsutil -m -h "Cache-Control:public, max-age=31536000, immutable" \
+              cp -r dist/assets "gs://${BUCKET_NAME}/"
+
+          # Upload static files (icons, manifest) with moderate cache (1 day)
+          for file in dist/*.png dist/*.svg dist/*.ico dist/manifest.json dist/sw.js; do
+              if [ -f "$file" ] 2>/dev/null; then
+                  gsutil -h "Cache-Control:public, max-age=86400" \
+                      cp "$file" "gs://${BUCKET_NAME}/"
+              fi
+          done
+
+          # Upload icons directory if it exists
+          if [ -d "dist/icons" ]; then
+              gsutil -m -h "Cache-Control:public, max-age=86400" \
+                  cp -r dist/icons "gs://${BUCKET_NAME}/"
+          fi
+
+          # Upload index.html with no-cache
+          gsutil -h "Cache-Control:no-cache, no-store, must-revalidate" \
+              cp dist/index.html "gs://${BUCKET_NAME}/"

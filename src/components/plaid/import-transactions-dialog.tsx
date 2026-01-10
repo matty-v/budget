@@ -290,7 +290,7 @@ export function ImportTransactionsDialog({ open, onOpenChange }: ImportTransacti
                         onClick={() => toggleTransaction(t.transaction_id)}
                         className={`mt-1 h-5 w-5 rounded border flex items-center justify-center flex-shrink-0 ${
                           t.selected
-                            ? 'bg-primary border-primary text-primary-foreground'
+                            ? 'bg-primary border-primary text-primary-foreground dark:bg-secondary dark:border-secondary dark:text-secondary-foreground'
                             : 'border-input'
                         }`}
                       >
@@ -388,7 +388,7 @@ export function ImportTransactionsDialog({ open, onOpenChange }: ImportTransacti
               </p>
               <div className="w-full bg-muted rounded-full h-2 mt-4">
                 <div
-                  className="bg-primary h-2 rounded-full transition-all"
+                  className="bg-primary dark:bg-secondary h-2 rounded-full transition-all"
                   style={{
                     width: `${(importProgress.current / importProgress.total) * 100}%`,
                   }}

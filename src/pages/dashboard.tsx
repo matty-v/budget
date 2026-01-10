@@ -24,7 +24,7 @@ export function DashboardPage() {
       <PageHeader title="Dashboard" />
 
       {/* Balance Overview */}
-      <Card className="bg-primary text-primary-foreground">
+      <Card className="bg-primary text-primary-foreground dark:bg-primary/10 dark:text-foreground dark:border-primary/20">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium opacity-80 flex items-center gap-2">
             <Wallet className="h-4 w-4" />

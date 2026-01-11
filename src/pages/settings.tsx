@@ -237,7 +237,6 @@ export function SettingsPage() {
               )}
             </div>
           ) : (
-            /* Show input for new connection or when changing */
             <div className="space-y-2">
               <label className="text-sm font-medium">Spreadsheet ID or URL</label>
               <div className="flex gap-2">

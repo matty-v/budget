@@ -292,8 +292,8 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Plaid Bank Connection */}
-      <Card>
+      {/* Plaid Bank Connection - Hidden as requested in issue #4 */}
+      {/* <Card>
         <CardHeader>
           <CardTitle>Bank Connection (Plaid)</CardTitle>
           <CardDescription>
@@ -302,7 +302,7 @@ export function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Server URL Configuration */}
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <label className="text-sm font-medium">Plaid Server URL</label>
             <div className="flex gap-2">
               <Input
@@ -323,29 +323,29 @@ export function SettingsPage() {
             <p className="text-xs text-muted-foreground">
               URL of the Plaid backend server. Run <code className="bg-muted px-1 rounded">node server/plaid-server.js</code> to start it.
             </p>
-          </div>
+          </div> */}
 
           {/* Connection Status */}
-          {plaidHealth && (
+          {/* {plaidHealth && (
             <div className="flex items-center gap-2 text-green-600">
               <CheckCircle className="h-4 w-4" />
               <span className="text-sm">
                 Connected to Plaid server ({plaidHealth.env} environment)
               </span>
             </div>
-          )}
+          )} */}
 
-          {plaidError && (
+          {/* {plaidError && (
             <div className="flex items-center gap-2 text-red-600">
               <XCircle className="h-4 w-4" />
               <span className="text-sm">
                 Cannot connect to Plaid server. Make sure it's running.
               </span>
             </div>
-          )}
+          )} */}
 
           {/* Link Bank / Import */}
-          {plaidHealth && (
+          {/* {plaidHealth && (
             <div className="space-y-4 pt-4 border-t">
               <div className="flex items-center justify-between">
                 <h4 className="font-medium">Linked Banks</h4>
@@ -363,9 +363,9 @@ export function SettingsPage() {
               </div>
               <LinkedInstitutions />
             </div>
-          )}
-        </CardContent>
-      </Card>
+          )} */}
+        {/* </CardContent>
+      </Card> */}
 
       {/* Setup Instructions */}
       <Card>

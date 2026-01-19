@@ -102,6 +102,87 @@ function parseBulkResponse(
   return results
 }
 
+/**
+ * Build prompt for bulk categorization of multiple transactions
+ */
+function buildBulkCategorizationPrompt(
+  transactions: Transaction[],
+  categories: Category[],
+  historicalTransactions?: Transaction[]
+): string {
+  // Determine transaction type from first transaction (all should be same type in practice)
+  const transactionType = transactions[0]?.type
+
+  // Filter categories by type
+  const categoriesJson = JSON.stringify(
+    categories
+      .filter((c) => c.type === transactionType)
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+      })),
+    null,
+    2
+  )
+
+  // Format transactions for prompt
+  const transactionsJson = JSON.stringify(
+    transactions.map((t) => ({
+      transaction_id: t.id,
+      description: t.description,
+      amount: Math.abs(t.amount),
+      date: t.date,
+      account_id: t.source_account_id,
+    })),
+    null,
+    2
+  )
+
+  let prompt = `You are a financial transaction categorization assistant. Based on the transaction details and available categories below, suggest the most appropriate category for each transaction.
+
+Available categories:
+${categoriesJson}
+`
+
+  // Add historical examples if available
+  if (historicalTransactions && historicalTransactions.length > 0) {
+    const examples = historicalTransactions
+      .filter((t) => t.category_id !== null && t.category_id !== '')
+      .slice(0, 10)
+      .map((t) => ({
+        description: t.description,
+        amount: Math.abs(t.amount),
+        category_id: t.category_id,
+      }))
+
+    if (examples.length > 0) {
+      prompt += `
+Historical examples (recent categorized transactions):
+${JSON.stringify(examples, null, 2)}
+`
+    }
+  }
+
+  prompt += `
+Transactions to categorize:
+${transactionsJson}
+
+For each transaction, suggest a category_id from the available categories, or null if you cannot confidently categorize it.
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "results": [
+    {"transaction_id": "txn-123", "category_id": "cat-456"},
+    {"transaction_id": "txn-124", "category_id": null}
+  ]
+}
+
+Remember: Only use category IDs from the available categories list above.`
+
+  return prompt
+}
+
 function buildCategorizationPrompt(
   transaction: Transaction,
   categories: Category[],

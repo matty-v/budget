@@ -169,11 +169,32 @@ export async function categorizeSingleTransaction(
 }
 
 export async function categorizeTransactions(
-  _transactions: Transaction[],
-  _categories: Category[],
-  _apiKey: string,
-  _historicalTransactions?: Transaction[]
+  transactions: Transaction[],
+  categories: Category[],
+  apiKey: string,
+  historicalTransactions?: Transaction[]
 ): Promise<Map<string, string>> {
-  return new Map()
+  const results = new Map<string, string>()
+
+  // Filter to only uncategorized non-transfer transactions
+  const toProcess = transactions.filter(
+    (t) => t.type !== 'transfer' && !t.category_id
+  )
+
+  // Process sequentially to avoid rate limits
+  for (const transaction of toProcess) {
+    const categoryId = await categorizeSingleTransaction(
+      transaction,
+      categories,
+      apiKey,
+      historicalTransactions
+    )
+
+    if (categoryId) {
+      results.set(transaction.id, categoryId)
+    }
+  }
+
+  return results
 }
 /* eslint-enable @typescript-eslint/no-unused-vars */

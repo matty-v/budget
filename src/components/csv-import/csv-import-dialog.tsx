@@ -27,6 +27,8 @@ import {
   type ImportableCSVTransaction,
   type CSVBankParser,
 } from '@/lib/csv-parsers'
+import { categorizeTransactions } from '@/lib/ai-categorization'
+import { STORAGE_KEYS } from '@/lib/constants'
 import { Loader2, Upload, Check, AlertCircle, FileText } from 'lucide-react'
 import type { TransactionFormData } from '@/types'
 
@@ -47,6 +49,54 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
   const { data: categories } = useCategories()
   const { data: existingTransactions } = useTransactions()
   const createTransaction = useCreateTransaction()
+
+  const applyAutoCategorization = async (
+    parsedTransactions: ImportableCSVTransaction[]
+  ): Promise<ImportableCSVTransaction[]> => {
+    // Check if auto-categorize is enabled
+    const autoCategorize = localStorage.getItem(STORAGE_KEYS.AUTO_CATEGORIZE_ON_IMPORT) === 'true'
+    const apiKey = localStorage.getItem(STORAGE_KEYS.ANTHROPIC_API_KEY)
+
+    if (!autoCategorize || !apiKey || !categories || !existingTransactions) {
+      return parsedTransactions
+    }
+
+    // Convert to Transaction format for AI service
+    const tempTransactions = parsedTransactions.map((t, index) => ({
+      id: `temp-${index}`,
+      date: t.date,
+      description: t.description,
+      amount: t.type === 'expense' ? -Math.abs(t.amount) : Math.abs(t.amount),
+      type: t.type,
+      category_id: null,
+      source_account_id: '',
+      transfer_id: null,
+      plaid_transaction_id: null,
+      notes: '',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }))
+
+    // Get historical for context
+    const historical = existingTransactions
+      .filter((t) => t.category_id && t.type !== 'transfer')
+      .slice(0, 10)
+
+    // Get AI suggestions
+    const suggestions = await categorizeTransactions(
+      tempTransactions,
+      categories,
+      apiKey,
+      historical
+    )
+
+    // Apply suggestions back to parsed transactions
+    return parsedTransactions.map((t, index) => {
+      const tempId = `temp-${index}`
+      const suggestedCategoryId = suggestions.get(tempId)
+      return suggestedCategoryId ? { ...t, categoryId: suggestedCategoryId } : t
+    })
+  }
 
   const processCSVFile = useCallback(
     async (file: File) => {
@@ -93,7 +143,8 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
         // Sort by date descending
         importable.sort((a, b) => b.date.localeCompare(a.date))
 
-        setTransactions(importable)
+        const withCategories = await applyAutoCategorization(importable)
+        setTransactions(withCategories)
         setStep('review')
       } catch (error) {
         toast({

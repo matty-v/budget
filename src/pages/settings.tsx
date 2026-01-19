@@ -3,14 +3,11 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { PlaidLinkButton, LinkedInstitutions, ImportTransactionsDialog } from '@/components/plaid'
 import { AiSettingsPanel } from '@/components/settings/ai-settings-panel'
 import { sheetsClient } from '@/lib/sheets-client'
-import { plaidClient } from '@/lib/plaid-client'
-import { usePlaidHealth } from '@/hooks/use-plaid'
 import { SHEET_NAMES, SHEET_COLUMNS, DEFAULT_CATEGORIES, STORAGE_KEYS } from '@/lib/constants'
 import { generateId } from '@/lib/utils'
-import { CheckCircle, XCircle, Loader2, AlertCircle, Download, ExternalLink } from 'lucide-react'
+import { CheckCircle, XCircle, Loader2, AlertCircle, ExternalLink } from 'lucide-react'
 
 type ConnectionStatus = 'idle' | 'checking' | 'connected' | 'error'
 type InitStatus = 'idle' | 'initializing' | 'success' | 'error'
@@ -28,10 +25,6 @@ export function SettingsPage() {
     missingSheets: string[]
   }>({ initialized: false, missingSheets: [] })
 
-  // Plaid state
-  const [plaidServerUrl, setPlaidServerUrl] = useState(plaidClient.getServerUrl())
-  const [importDialogOpen, setImportDialogOpen] = useState(false)
-  const { data: plaidHealth, isLoading: plaidLoading, error: plaidError, refetch: refetchPlaidHealth } = usePlaidHealth()
 
   // AI categorization state
   const [anthropicApiKey, setAnthropicApiKey] = useState(
@@ -77,12 +70,6 @@ export function SettingsPage() {
       checkConnection(savedId)
     }
   }, [])
-
-  const handlePlaidServerUrlChange = (url: string) => {
-    setPlaidServerUrl(url)
-    plaidClient.setServerUrl(url)
-    refetchPlaidHealth()
-  }
 
   const extractSpreadsheetId = (input: string): string => {
     // Handle full Google Sheets URL
@@ -273,7 +260,6 @@ export function SettingsPage() {
               )}
             </div>
           ) : (
-            /* Show input for new connection or when changing */
             <div className="space-y-2">
               <label className="text-sm font-medium">Spreadsheet ID or URL</label>
               <div className="flex gap-2">
@@ -310,81 +296,6 @@ export function SettingsPage() {
                   <span className="text-sm">{connectionError}</span>
                 </div>
               )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Plaid Bank Connection */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Bank Connection (Plaid)</CardTitle>
-          <CardDescription>
-            Connect your bank accounts to automatically import transactions.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Server URL Configuration */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Plaid Server URL</label>
-            <div className="flex gap-2">
-              <Input
-                value={plaidServerUrl}
-                onChange={(e) => setPlaidServerUrl(e.target.value)}
-                onBlur={() => handlePlaidServerUrlChange(plaidServerUrl)}
-                placeholder="http://localhost:3001"
-                className="flex-1"
-              />
-              <Button
-                variant="outline"
-                onClick={() => refetchPlaidHealth()}
-                disabled={plaidLoading}
-              >
-                {plaidLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Test'}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              URL of the Plaid backend server. Run <code className="bg-muted px-1 rounded">node server/plaid-server.js</code> to start it.
-            </p>
-          </div>
-
-          {/* Connection Status */}
-          {plaidHealth && (
-            <div className="flex items-center gap-2 text-green-600">
-              <CheckCircle className="h-4 w-4" />
-              <span className="text-sm">
-                Connected to Plaid server ({plaidHealth.env} environment)
-              </span>
-            </div>
-          )}
-
-          {plaidError && (
-            <div className="flex items-center gap-2 text-red-600">
-              <XCircle className="h-4 w-4" />
-              <span className="text-sm">
-                Cannot connect to Plaid server. Make sure it's running.
-              </span>
-            </div>
-          )}
-
-          {/* Link Bank / Import */}
-          {plaidHealth && (
-            <div className="space-y-4 pt-4 border-t">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium">Linked Banks</h4>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setImportDialogOpen(true)}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Import
-                  </Button>
-                  <PlaidLinkButton onSuccess={() => refetchPlaidHealth()} />
-                </div>
-              </div>
-              <LinkedInstitutions />
             </div>
           )}
         </CardContent>
@@ -430,25 +341,8 @@ export function SettingsPage() {
               <li>Click "Initialize Sheets" to create the required tabs</li>
             </ol>
           </div>
-
-          <div className="pt-4 border-t">
-            <h4 className="font-medium mb-2">Plaid Setup (Optional)</h4>
-            <ol className="space-y-1 text-sm list-decimal list-inside">
-              <li>Create a Plaid developer account at <code className="bg-muted px-1 rounded">dashboard.plaid.com</code></li>
-              <li>Copy <code className="bg-muted px-1 rounded">server/.env.example</code> to <code className="bg-muted px-1 rounded">server/.env</code></li>
-              <li>Add your Plaid credentials to the .env file</li>
-              <li>Run <code className="bg-muted px-1 rounded">node server/plaid-server.js</code></li>
-              <li>Click "Connect Bank" above to link your accounts</li>
-            </ol>
-          </div>
         </CardContent>
       </Card>
-
-      {/* Import Dialog */}
-      <ImportTransactionsDialog
-        open={importDialogOpen}
-        onOpenChange={setImportDialogOpen}
-      />
     </div>
   )
 }

@@ -15,9 +15,12 @@ export function formatCurrency(amount: number): string {
 export function formatDate(date: string | Date): string {
   let d: Date
   if (typeof date === 'string') {
+    // Extract YYYY-MM-DD from ISO timestamps (e.g., "2025-12-31T00:00:00.000Z" -> "2025-12-31")
+    const dateOnly = date.split('T')[0]
+
     // Handle YYYY-MM-DD format without timezone shift
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      const [year, month, day] = date.split('-').map(Number)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) {
+      const [year, month, day] = dateOnly.split('-').map(Number)
       d = new Date(year, month - 1, day)
     } else {
       d = new Date(date)

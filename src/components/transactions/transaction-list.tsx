@@ -7,9 +7,12 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 
 function formatDateHeader(dateStr: string): string {
+  // Extract YYYY-MM-DD from ISO timestamps (e.g., "2025-12-31T00:00:00.000Z" -> "2025-12-31")
+  const dateOnly = dateStr.split('T')[0]
+
   // Handle YYYY-MM-DD format without timezone issues
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    const [year, month, day] = dateStr.split('-').map(Number)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) {
+    const [year, month, day] = dateOnly.split('-').map(Number)
     const date = new Date(year, month - 1, day)
     return date.toLocaleDateString('en-US', {
       weekday: 'long',

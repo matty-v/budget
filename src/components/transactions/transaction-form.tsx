@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -43,6 +43,30 @@ export function TransactionForm({
   const [accountId, setAccountId] = useState(transaction?.source_account_id ?? '')
   const [categoryId, setCategoryId] = useState(transaction?.category_id ?? '')
   const [notes, setNotes] = useState(transaction?.notes ?? '')
+
+  // Update form state when transaction prop changes
+  useEffect(() => {
+    if (transaction) {
+      setType(transaction.type === 'transfer' ? 'expense' : transaction.type)
+      setDescription(transaction.description)
+      setAmount(String(Math.abs(transaction.amount)))
+      // Extract YYYY-MM-DD from date string (handles both ISO timestamps and YYYY-MM-DD formats)
+      const dateOnly = transaction.date.split('T')[0]
+      setDate(dateOnly)
+      setAccountId(transaction.source_account_id)
+      setCategoryId(transaction.category_id ?? '')
+      setNotes(transaction.notes ?? '')
+    } else {
+      // Reset to defaults for new transaction
+      setType('expense')
+      setDescription('')
+      setAmount('')
+      setDate(toISODateString(new Date()))
+      setAccountId('')
+      setCategoryId('')
+      setNotes('')
+    }
+  }, [transaction])
 
   const filteredCategories = categories?.filter((c) => c.type === type) ?? []
 

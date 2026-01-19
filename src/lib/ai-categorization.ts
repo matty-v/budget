@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { Transaction, Category } from '@/types'
 
 interface ClaudeMessage {
@@ -197,4 +196,3 @@ export async function categorizeTransactions(
 
   return results
 }
-/* eslint-enable @typescript-eslint/no-unused-vars */

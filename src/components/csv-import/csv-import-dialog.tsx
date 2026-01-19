@@ -130,7 +130,7 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
         setIsProcessing(false)
       }
     },
-    [existingTransactions]
+    [existingTransactions, categories]
   )
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

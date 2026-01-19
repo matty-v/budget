@@ -25,12 +25,15 @@ interface BulkCategorizationResult {
 
 const PROXY_URL = 'https://proxy-g56q77hy2a-uc.a.run.app/api.anthropic.com/v1/messages'
 const MODEL = 'claude-haiku-4-5-20251001'
-const MAX_TOKENS = 128
+const MAX_TOKENS = 2048  // Increased for bulk responses
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const BATCH_SIZE = 50
 const ANTHROPIC_VERSION = '2023-06-01'
 
 /**
  * Split array into chunks of specified size
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function chunk<T>(array: T[], size: number): T[][] {
   const chunks: T[][] = []
   for (let i = 0; i < array.length; i += size) {
@@ -181,6 +184,73 @@ Respond ONLY with valid JSON in this exact format:
 Remember: Only use category IDs from the available categories list above.`
 
   return prompt
+}
+
+/**
+ * Process a single batch of transactions (up to BATCH_SIZE)
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function processBatch(
+  transactions: Transaction[],
+  categories: Category[],
+  apiKey: string,
+  historicalTransactions?: Transaction[]
+): Promise<Map<string, string>> {
+  if (!apiKey) {
+    console.warn('No API key provided for categorization')
+    return new Map()
+  }
+
+  if (transactions.length === 0) {
+    return new Map()
+  }
+
+  try {
+    const prompt = buildBulkCategorizationPrompt(
+      transactions,
+      categories,
+      historicalTransactions
+    )
+
+    const messages: ClaudeMessage[] = [
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ]
+
+    const response = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': ANTHROPIC_VERSION,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        messages,
+      }),
+    })
+
+    if (!response.ok) {
+      console.error('Claude API error:', response.status, response.statusText)
+      return new Map()
+    }
+
+    const data: ClaudeResponse = await response.json()
+    const textContent = data.content.find((c) => c.type === 'text')?.text
+
+    if (!textContent) {
+      console.error('No text content in Claude response')
+      return new Map()
+    }
+
+    return parseBulkResponse(textContent, transactions, categories)
+  } catch (error) {
+    console.error('Error processing batch:', error)
+    return new Map()
+  }
 }
 
 function buildCategorizationPrompt(

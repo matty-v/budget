@@ -83,6 +83,7 @@ export function AiSettingsPanel({
               <button
                 type="button"
                 onClick={() => setShowKey(!showKey)}
+                aria-label={showKey ? 'Hide API key' : 'Show API key'}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -107,9 +108,9 @@ export function AiSettingsPanel({
                 Change
               </Button>
               <Button
-                variant="outline"
+                variant="destructive"
                 onClick={handleRemove}
-                className="flex-1 text-red-600 hover:text-red-700"
+                className="flex-1"
               >
                 Remove
               </Button>
@@ -136,6 +137,9 @@ export function AiSettingsPanel({
               variant="outline"
               size="sm"
               onClick={() => onAutoCategorizChange(!autoCategorizOnImport)}
+              aria-pressed={autoCategorizOnImport}
+              role="switch"
+              aria-label="Auto-categorize on import"
               className={autoCategorizOnImport ? 'bg-green-100' : ''}
             >
               {autoCategorizOnImport ? 'Enabled' : 'Disabled'}

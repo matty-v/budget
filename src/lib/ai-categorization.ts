@@ -26,14 +26,12 @@ interface BulkCategorizationResult {
 const PROXY_URL = 'https://proxy-g56q77hy2a-uc.a.run.app/api.anthropic.com/v1/messages'
 const MODEL = 'claude-haiku-4-5-20251001'
 const MAX_TOKENS = 2048  // Increased for bulk responses
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const BATCH_SIZE = 50
 const ANTHROPIC_VERSION = '2023-06-01'
 
 /**
  * Split array into chunks of specified size
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function chunk<T>(array: T[], size: number): T[][] {
   const chunks: T[][] = []
   for (let i = 0; i < array.length; i += size) {
@@ -189,7 +187,6 @@ Remember: Only use category IDs from the available categories list above.`
 /**
  * Process a single batch of transactions (up to BATCH_SIZE)
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function processBatch(
   transactions: Transaction[],
   categories: Category[],
@@ -405,26 +402,34 @@ export async function categorizeTransactions(
   apiKey: string,
   historicalTransactions?: Transaction[]
 ): Promise<Map<string, string>> {
-  const results = new Map<string, string>()
+  const allResults = new Map<string, string>()
 
   // Filter to only uncategorized non-transfer transactions
   const toProcess = transactions.filter(
     (t) => t.type !== 'transfer' && !t.category_id
   )
 
-  // Process sequentially to avoid rate limits
-  for (const transaction of toProcess) {
-    const categoryId = await categorizeSingleTransaction(
-      transaction,
+  if (toProcess.length === 0) {
+    return allResults
+  }
+
+  // Split into batches of BATCH_SIZE
+  const batches = chunk(toProcess, BATCH_SIZE)
+
+  // Process each batch sequentially
+  for (const batch of batches) {
+    const batchResults = await processBatch(
+      batch,
       categories,
       apiKey,
       historicalTransactions
     )
 
-    if (categoryId) {
-      results.set(transaction.id, categoryId)
+    // Merge batch results into overall results
+    for (const [txnId, catId] of batchResults) {
+      allResults.set(txnId, catId)
     }
   }
 
-  return results
+  return allResults
 }

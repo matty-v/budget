@@ -1,13 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type { Transaction, Category } from '@/types'
 
-// @ts-expect-error - Placeholder interface, will be used in future implementation
 interface ClaudeMessage {
   role: 'user' | 'assistant'
   content: string
 }
 
-// @ts-expect-error - Placeholder interface, will be used in future implementation
 interface ClaudeResponse {
   content: Array<{
     type: string
@@ -15,21 +13,15 @@ interface ClaudeResponse {
   }>
 }
 
-// @ts-expect-error - Placeholder interface, will be used in future implementation
 interface CategorizationResult {
   category_id: string | null
 }
 
-// @ts-expect-error - Placeholder constant, will be used in future implementation
 const PROXY_URL = 'https://proxy-g56q77hy2a-uc.a.run.app/api.anthropic.com/v1/messages'
-// @ts-expect-error - Placeholder constant, will be used in future implementation
 const MODEL = 'claude-haiku-4-5-20251001'
-// @ts-expect-error - Placeholder constant, will be used in future implementation
 const MAX_TOKENS = 128
-// @ts-expect-error - Placeholder constant, will be used in future implementation
 const ANTHROPIC_VERSION = '2023-06-01'
 
-// @ts-expect-error - Placeholder function, will be used in future implementation
 function buildCategorizationPrompt(
   transaction: Transaction,
   categories: Category[],
@@ -94,14 +86,86 @@ Remember: Only use category IDs from the available categories list above.`
   return prompt
 }
 
-// Placeholder functions - will be implemented in subsequent tasks
 export async function categorizeSingleTransaction(
-  _transaction: Transaction,
-  _categories: Category[],
-  _apiKey: string,
-  _historicalTransactions?: Transaction[]
+  transaction: Transaction,
+  categories: Category[],
+  apiKey: string,
+  historicalTransactions?: Transaction[]
 ): Promise<string | null> {
-  return null
+  if (!apiKey) {
+    console.warn('No API key provided for categorization')
+    return null
+  }
+
+  // Skip transfers
+  if (transaction.type === 'transfer') {
+    return null
+  }
+
+  // Skip already categorized
+  if (transaction.category_id) {
+    return null
+  }
+
+  try {
+    const prompt = buildCategorizationPrompt(transaction, categories, historicalTransactions)
+
+    const messages: ClaudeMessage[] = [
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ]
+
+    const response = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': ANTHROPIC_VERSION,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        messages,
+      }),
+    })
+
+    if (!response.ok) {
+      console.error('Claude API error:', response.status, response.statusText)
+      return null
+    }
+
+    const data: ClaudeResponse = await response.json()
+    const textContent = data.content.find((c) => c.type === 'text')?.text
+
+    if (!textContent) {
+      console.error('No text content in Claude response')
+      return null
+    }
+
+    // Strip markdown code blocks if present
+    let jsonText = textContent.trim()
+    if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
+    }
+
+    const result: CategorizationResult = JSON.parse(jsonText)
+
+    // Validate category exists
+    if (result.category_id) {
+      const categoryExists = categories.some((c) => c.id === result.category_id)
+      if (!categoryExists) {
+        console.warn('AI suggested non-existent category:', result.category_id)
+        return null
+      }
+    }
+
+    return result.category_id
+  } catch (error) {
+    console.error('Error categorizing transaction:', error)
+    return null
+  }
 }
 
 export async function categorizeTransactions(

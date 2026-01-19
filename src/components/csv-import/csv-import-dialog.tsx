@@ -27,6 +27,7 @@ import {
   type ImportableCSVTransaction,
   type CSVBankParser,
 } from '@/lib/csv-parsers'
+import { applyAutoCategorization } from '@/lib/import-helpers'
 import { Loader2, Upload, Check, AlertCircle, FileText } from 'lucide-react'
 import type { TransactionFormData } from '@/types'
 
@@ -93,7 +94,31 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
         // Sort by date descending
         importable.sort((a, b) => b.date.localeCompare(a.date))
 
-        setTransactions(importable)
+        // Convert to TransactionFormData for auto-categorization
+        const formDataTransactions: TransactionFormData[] = importable.map((t) => ({
+          date: t.date,
+          description: t.description,
+          amount: t.amount,
+          type: t.type,
+          source_account_id: '',
+          category_id: null,
+          notes: '',
+          plaid_transaction_id: t.hash,
+        }))
+
+        const categorized = await applyAutoCategorization(
+          formDataTransactions,
+          categories,
+          existingTransactions
+        )
+
+        // Apply categories back to importable transactions
+        const withCategories = importable.map((t, index) => ({
+          ...t,
+          categoryId: categorized[index].category_id || '',
+        }))
+
+        setTransactions(withCategories)
         setStep('review')
       } catch (error) {
         toast({
@@ -105,7 +130,7 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
         setIsProcessing(false)
       }
     },
-    [existingTransactions]
+    [existingTransactions, categories]
   )
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

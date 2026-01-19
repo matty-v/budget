@@ -1,5 +1,10 @@
 import { TransactionItem } from './transaction-item'
 import type { Transaction, Category, Account } from '@/types'
+import { useCategorizeTransactions } from '@/hooks/use-ai-categorization'
+import { STORAGE_KEYS } from '@/lib/constants'
+import { Sparkles, Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { useToast } from '@/hooks/use-toast'
 
 function formatDateHeader(dateStr: string): string {
   // Handle YYYY-MM-DD format without timezone issues
@@ -39,6 +44,51 @@ export function TransactionList({
   onEdit,
   onDelete,
 }: TransactionListProps) {
+  const { toast } = useToast()
+  const { mutate: categorizeTransactions, isPending: isCategorizing } = useCategorizeTransactions()
+  const hasApiKey = !!localStorage.getItem(STORAGE_KEYS.ANTHROPIC_API_KEY)
+
+  // Get uncategorized count
+  const uncategorizedCount = transactions?.filter(
+    (t) => t.type !== 'transfer' && !t.category_id
+  ).length || 0
+
+  const handleCategorize = () => {
+    if (!transactions) return
+
+    const uncategorizedIds = transactions
+      .filter((t) => t.type !== 'transfer' && !t.category_id)
+      .map((t) => t.id)
+
+    categorizeTransactions(uncategorizedIds, {
+      onSuccess: (result) => {
+        if (result.categorized > 0) {
+          const message =
+            result.failed > 0
+              ? `Categorized ${result.categorized} of ${result.total} transactions (${result.failed} couldn't be categorized)`
+              : `Categorized ${result.categorized} of ${result.total} transactions`
+          toast({
+            title: 'Categorization complete',
+            description: message,
+          })
+        } else {
+          toast({
+            title: 'Categorization failed',
+            description: 'Could not categorize transactions. Please try manually.',
+            variant: 'destructive',
+          })
+        }
+      },
+      onError: (error) => {
+        toast({
+          title: 'Categorization failed',
+          description: error instanceof Error ? error.message : 'Please check your API key.',
+          variant: 'destructive',
+        })
+      },
+    })
+  }
+
   if (transactions.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -64,6 +114,29 @@ export function TransactionList({
 
   return (
     <div className="space-y-6">
+      {hasApiKey && uncategorizedCount > 0 && (
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCategorize}
+            disabled={isCategorizing}
+            title={hasApiKey ? undefined : 'Configure API key in Settings'}
+          >
+            {isCategorizing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Categorizing...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Categorize {uncategorizedCount}
+              </>
+            )}
+          </Button>
+        </div>
+      )}
       {sortedDates.map((date) => (
         <div key={date}>
           <h3 className="text-sm font-medium text-muted-foreground mb-2">

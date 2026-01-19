@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { AiSettingsPanel } from '@/components/settings/ai-settings-panel'
 import { sheetsClient } from '@/lib/sheets-client'
 import { SHEET_NAMES, SHEET_COLUMNS, DEFAULT_CATEGORIES, STORAGE_KEYS } from '@/lib/constants'
 import { generateId } from '@/lib/utils'
@@ -24,6 +25,14 @@ export function SettingsPage() {
     missingSheets: string[]
   }>({ initialized: false, missingSheets: [] })
 
+
+  // AI categorization state
+  const [anthropicApiKey, setAnthropicApiKey] = useState(
+    () => localStorage.getItem(STORAGE_KEYS.ANTHROPIC_API_KEY) || ''
+  )
+  const [autoCategorizOnImport, setAutoCategorizOnImport] = useState(
+    () => localStorage.getItem(STORAGE_KEYS.AUTO_CATEGORIZE_ON_IMPORT) === 'true'
+  )
 
   const checkConnection = async (id: string) => {
     setConnectionStatus('checking')
@@ -153,6 +162,20 @@ export function SettingsPage() {
     }
   }
 
+  const handleApiKeyChange = (key: string) => {
+    if (key) {
+      localStorage.setItem(STORAGE_KEYS.ANTHROPIC_API_KEY, key)
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.ANTHROPIC_API_KEY)
+    }
+    setAnthropicApiKey(key)
+  }
+
+  const handleAutoCategorizChange = (enabled: boolean) => {
+    localStorage.setItem(STORAGE_KEYS.AUTO_CATEGORIZE_ON_IMPORT, String(enabled))
+    setAutoCategorizOnImport(enabled)
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader title="Settings" />
@@ -275,6 +298,24 @@ export function SettingsPage() {
               )}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* AI Categorization */}
+      <Card>
+        <CardHeader>
+          <CardTitle>AI-Assisted Categorization</CardTitle>
+          <CardDescription>
+            Use Claude AI to automatically categorize transactions. Bring your own API key for privacy and control.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AiSettingsPanel
+            apiKey={anthropicApiKey}
+            onApiKeyChange={handleApiKeyChange}
+            autoCategorizOnImport={autoCategorizOnImport}
+            onAutoCategorizChange={handleAutoCategorizChange}
+          />
         </CardContent>
       </Card>
 

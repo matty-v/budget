@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { Transaction, Category } from '@/types'
 
 // @ts-expect-error - Placeholder interface, will be used in future implementation
@@ -28,7 +29,7 @@ const MAX_TOKENS = 128
 // @ts-expect-error - Placeholder constant, will be used in future implementation
 const ANTHROPIC_VERSION = '2023-06-01'
 
-// Placeholder functions
+// Placeholder functions - will be implemented in subsequent tasks
 export async function categorizeSingleTransaction(
   _transaction: Transaction,
   _categories: Category[],
@@ -46,3 +47,4 @@ export async function categorizeTransactions(
 ): Promise<Map<string, string>> {
   return new Map()
 }
+/* eslint-enable @typescript-eslint/no-unused-vars */

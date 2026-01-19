@@ -2,8 +2,9 @@ export const SHEETS_API_URL = 'https://sheetsapi-g56q77hy2a-uc.a.run.app'
 
 export const STORAGE_KEYS = {
   SPREADSHEET_ID: 'budget_spreadsheet_id',
-  ANTHROPIC_API_KEY: 'anthropic-api-key',
-  AUTO_CATEGORIZE_ON_IMPORT: 'auto-categorize-on-import',
+  // User-provided Anthropic API key (BYOK) - stored locally in browser
+  ANTHROPIC_API_KEY: 'anthropic_api_key',
+  AUTO_CATEGORIZE_ON_IMPORT: 'auto_categorize_on_import',
 } as const
 
 export const SHEET_NAMES = {

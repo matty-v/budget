@@ -25,6 +25,8 @@ import { toast } from '@/hooks/use-toast';
 import { formatCurrency, toISODateString } from '@/lib/utils';
 import { Loader2, Download, Check } from 'lucide-react';
 import type { TransactionFormData } from '@/types';
+import { categorizeTransactions } from '@/lib/ai-categorization';
+import { STORAGE_KEYS } from '@/lib/constants';
 
 interface ImportTransactionsDialogProps {
   open: boolean;
@@ -54,6 +56,54 @@ export function ImportTransactionsDialog({ open, onOpenChange }: ImportTransacti
   const { data: existingTransactions } = useTransactions();
   const createTransaction = useCreateTransaction();
 
+  const applyAutoCategorization = async (
+    parsedTransactions: TransactionFormData[]
+  ): Promise<TransactionFormData[]> => {
+    // Check if auto-categorize is enabled
+    const autoCategorize = localStorage.getItem(STORAGE_KEYS.AUTO_CATEGORIZE_ON_IMPORT) === 'true';
+    const apiKey = localStorage.getItem(STORAGE_KEYS.ANTHROPIC_API_KEY);
+
+    if (!autoCategorize || !apiKey || !categories || !existingTransactions) {
+      return parsedTransactions;
+    }
+
+    // Convert to Transaction format for AI service
+    const tempTransactions = parsedTransactions.map((t, index) => ({
+      id: `temp-${index}`,
+      date: t.date,
+      description: t.description,
+      amount: t.type === 'expense' ? -Math.abs(t.amount) : Math.abs(t.amount),
+      type: t.type,
+      category_id: t.category_id,
+      source_account_id: t.source_account_id,
+      transfer_id: null,
+      plaid_transaction_id: t.plaid_transaction_id || null,
+      notes: t.notes,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+
+    // Get historical for context
+    const historical = existingTransactions
+      .filter((t) => t.category_id && t.type !== 'transfer')
+      .slice(0, 10);
+
+    // Get AI suggestions
+    const suggestions = await categorizeTransactions(
+      tempTransactions,
+      categories,
+      apiKey,
+      historical
+    );
+
+    // Apply suggestions back to parsed transactions
+    return parsedTransactions.map((t, index) => {
+      const tempId = `temp-${index}`;
+      const suggestedCategoryId = suggestions.get(tempId);
+      return suggestedCategoryId ? { ...t, category_id: suggestedCategoryId } : t;
+    });
+  };
+
   const fetchTransactions = async () => {
     setIsLoading(true);
     try {
@@ -67,21 +117,44 @@ export function ImportTransactionsDialog({ open, onOpenChange }: ImportTransacti
       );
 
       // Filter out pending transactions and already-imported ones
-      const importable: ImportableTransaction[] = plaidTransactions
-        .filter((t) => !t.pending && !importedPlaidIds.has(t.transaction_id))
-        .map((t) => ({
-          ...t,
-          selected: true,
-          accountId: '', // User needs to map this
-          categoryId: '', // User can optionally map this
-        }));
+      const filteredTransactions = plaidTransactions
+        .filter((t) => !t.pending && !importedPlaidIds.has(t.transaction_id));
 
-      if (importable.length === 0 && plaidTransactions.length > 0) {
+      if (filteredTransactions.length === 0 && plaidTransactions.length > 0) {
         toast({
           title: 'No new transactions',
           description: 'All transactions in this date range have already been imported.',
         });
+        setTransactions([]);
+        setStep('review');
+        return;
       }
+
+      // Convert to TransactionFormData for auto-categorization
+      const parsedTransactions: TransactionFormData[] = filteredTransactions.map((t) => {
+        const isExpense = t.amount > 0;
+        return {
+          type: isExpense ? 'expense' : 'income',
+          description: t.merchant_name || t.name,
+          amount: Math.abs(t.amount),
+          date: t.date,
+          source_account_id: '', // Will be set by user
+          category_id: null,
+          notes: `Imported from ${t.institution.name}`,
+          plaid_transaction_id: t.transaction_id,
+        };
+      });
+
+      // Apply auto-categorization
+      const withCategories = await applyAutoCategorization(parsedTransactions);
+
+      // Convert to ImportableTransaction format
+      const importable: ImportableTransaction[] = filteredTransactions.map((t, index) => ({
+        ...t,
+        selected: true,
+        accountId: '', // User needs to map this
+        categoryId: withCategories[index].category_id || '', // Use AI suggestion or empty
+      }));
 
       setTransactions(importable);
       setStep('review');

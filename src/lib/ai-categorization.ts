@@ -29,6 +29,63 @@ const MAX_TOKENS = 128
 // @ts-expect-error - Placeholder constant, will be used in future implementation
 const ANTHROPIC_VERSION = '2023-06-01'
 
+// @ts-expect-error - Placeholder function, will be used in future implementation
+function buildCategorizationPrompt(
+  transaction: Transaction,
+  categories: Category[],
+  historicalTransactions?: Transaction[]
+): string {
+  const categoriesJson = JSON.stringify(
+    categories.map((c) => ({
+      id: c.id,
+      name: c.name,
+      type: c.type,
+    }))
+  )
+
+  const transactionContext = {
+    description: transaction.description,
+    amount: Math.abs(transaction.amount),
+    date: transaction.date,
+    account_id: transaction.source_account_id,
+  }
+
+  let prompt = `You are a transaction categorization assistant. Analyze the transaction and suggest the most appropriate category from the provided list.
+
+Available categories:
+${categoriesJson}
+
+Transaction to categorize:
+${JSON.stringify(transactionContext, null, 2)}
+`
+
+  if (historicalTransactions && historicalTransactions.length > 0) {
+    const examples = historicalTransactions
+      .slice(0, 10)
+      .map((t) => ({
+        description: t.description,
+        amount: Math.abs(t.amount),
+        category_id: t.category_id,
+      }))
+
+    prompt += `
+Historical examples:
+${JSON.stringify(examples, null, 2)}
+`
+  }
+
+  prompt += `
+Respond with ONLY a JSON object in this format:
+{"category_id": "xxx"}
+
+If you cannot confidently categorize this transaction, respond with:
+{"category_id": null}
+
+Remember: Only use category IDs from the available categories list above.`
+
+  return prompt
+}
+
 // Placeholder functions - will be implemented in subsequent tasks
 export async function categorizeSingleTransaction(
   _transaction: Transaction,

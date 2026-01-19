@@ -16,6 +16,13 @@ interface CategorizationResult {
   category_id: string | null
 }
 
+interface BulkCategorizationResult {
+  results: Array<{
+    transaction_id: string
+    category_id: string | null
+  }>
+}
+
 const PROXY_URL = 'https://proxy-g56q77hy2a-uc.a.run.app/api.anthropic.com/v1/messages'
 const MODEL = 'claude-haiku-4-5-20251001'
 const MAX_TOKENS = 128
@@ -30,6 +37,69 @@ function chunk<T>(array: T[], size: number): T[][] {
     chunks.push(array.slice(i, i + size))
   }
   return chunks
+}
+
+/**
+ * Parse bulk categorization response from Claude
+ * Returns Map of transaction_id -> category_id for valid results
+ */
+function parseBulkResponse(
+  responseText: string,
+  transactions: Transaction[],
+  categories: Category[]
+): Map<string, string> {
+  const results = new Map<string, string>()
+
+  try {
+    // Strip markdown code blocks if present
+    let jsonText = responseText.trim()
+    if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
+    }
+
+    const parsed: BulkCategorizationResult = JSON.parse(jsonText)
+
+    if (!parsed.results || !Array.isArray(parsed.results)) {
+      console.error('Invalid response format: missing results array')
+      return results
+    }
+
+    // Create a Set of valid transaction IDs for fast lookup
+    const validTxnIds = new Set(transactions.map((t) => t.id))
+
+    // Process each result
+    for (const result of parsed.results) {
+      if (!result.transaction_id) {
+        console.warn('Result missing transaction_id, skipping')
+        continue
+      }
+
+      // Verify transaction ID matches input
+      if (!validTxnIds.has(result.transaction_id)) {
+        console.warn('Unknown transaction_id in response:', result.transaction_id)
+        continue
+      }
+
+      // Skip null category_id
+      if (!result.category_id) {
+        continue
+      }
+
+      // Validate category exists
+      const categoryExists = categories.some((c) => c.id === result.category_id)
+      if (!categoryExists) {
+        console.warn('Invalid category_id in response:', result.category_id)
+        continue
+      }
+
+      // Valid result
+      results.set(result.transaction_id, result.category_id)
+    }
+  } catch (error) {
+    console.error('Error parsing bulk categorization response:', error)
+  }
+
+  return results
 }
 
 function buildCategorizationPrompt(

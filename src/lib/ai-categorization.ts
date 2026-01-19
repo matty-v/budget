@@ -35,12 +35,19 @@ function buildCategorizationPrompt(
   categories: Category[],
   historicalTransactions?: Transaction[]
 ): string {
+  // Transfers don't need categorization
+  if (transaction.type === 'transfer') {
+    return ''
+  }
+
   const categoriesJson = JSON.stringify(
-    categories.map((c) => ({
-      id: c.id,
-      name: c.name,
-      type: c.type,
-    }))
+    categories
+      .filter((c) => c.type === transaction.type)
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+      }))
   )
 
   const transactionContext = {
@@ -61,6 +68,7 @@ ${JSON.stringify(transactionContext, null, 2)}
 
   if (historicalTransactions && historicalTransactions.length > 0) {
     const examples = historicalTransactions
+      .filter((t) => t.category_id !== null && t.category_id !== '')
       .slice(0, 10)
       .map((t) => ({
         description: t.description,

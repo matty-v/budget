@@ -21,6 +21,17 @@ const MODEL = 'claude-haiku-4-5-20251001'
 const MAX_TOKENS = 128
 const ANTHROPIC_VERSION = '2023-06-01'
 
+/**
+ * Split array into chunks of specified size
+ */
+function chunk<T>(array: T[], size: number): T[][] {
+  const chunks: T[][] = []
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size))
+  }
+  return chunks
+}
+
 function buildCategorizationPrompt(
   transaction: Transaction,
   categories: Category[],

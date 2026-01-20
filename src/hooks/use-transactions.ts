@@ -69,6 +69,31 @@ export function useCreateTransaction() {
   })
 }
 
+export function useCreateTransactionsBulk() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: TransactionFormData[]) => {
+      // Serialize each transaction
+      const rows = data.map(txn => {
+        // Normalize amount sign based on type
+        let amount = Math.abs(txn.amount)
+        if (txn.type === 'expense') {
+          amount = -amount
+        }
+        return serializeTransaction({ ...txn, amount })
+      })
+
+      // Single API call for all transactions
+      const response = await sheetsClient.transactions().createRowsBulk(rows)
+      return response
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all })
+    }
+  })
+}
+
 export function useCreateTransfer() {
   const queryClient = useQueryClient()
 

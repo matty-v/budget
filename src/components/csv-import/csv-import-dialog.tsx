@@ -18,7 +18,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useCategories } from '@/hooks/use-categories'
-import { useCreateTransaction, useTransactions } from '@/hooks/use-transactions'
+import { useCreateTransactionsBulk, useTransactions } from '@/hooks/use-transactions'
 import { toast } from '@/hooks/use-toast'
 import { formatCurrency } from '@/lib/utils'
 import {
@@ -47,7 +47,7 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
   const { data: accounts } = useAccounts()
   const { data: categories } = useCategories()
   const { data: existingTransactions } = useTransactions()
-  const createTransaction = useCreateTransaction()
+  const createTransactionsBulk = useCreateTransactionsBulk()
 
   const processCSVFile = useCallback(
     async (file: File) => {
@@ -212,40 +212,49 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
     setStep('importing')
     setImportProgress({ current: 0, total: selectedTransactions.length })
 
-    let imported = 0
-    let errors = 0
+    try {
+      // Prepare all transactions
+      const selectedTxns: TransactionFormData[] = selectedTransactions.map(t => ({
+        date: t.date,
+        description: t.description,
+        amount: t.amount,
+        type: t.type,
+        source_account_id: t.accountId,
+        category_id: t.categoryId || null,
+        notes: `Imported from ${detectedBank?.bankName || 'CSV'}`,
+        plaid_transaction_id: t.hash,
+      }))
 
-    for (const t of selectedTransactions) {
-      try {
-        const formData: TransactionFormData = {
-          type: t.type,
-          description: t.description,
-          amount: t.amount,
-          date: t.date,
-          source_account_id: t.accountId,
-          category_id: t.categoryId || null,
-          notes: `Imported from ${detectedBank?.bankName || 'CSV'}`,
-          plaid_transaction_id: t.hash,
-        }
-
-        await createTransaction.mutateAsync(formData)
-        imported++
-      } catch (error) {
-        console.error('Failed to import transaction:', t.description, error)
-        errors++
+      // Split into batches of 100
+      const BATCH_SIZE = 100
+      const batches: TransactionFormData[][] = []
+      for (let i = 0; i < selectedTxns.length; i += BATCH_SIZE) {
+        batches.push(selectedTxns.slice(i, i + BATCH_SIZE))
       }
 
-      setImportProgress({ current: imported + errors, total: selectedTransactions.length })
+      // Process each batch
+      for (let i = 0; i < batches.length; i++) {
+        await createTransactionsBulk.mutateAsync(batches[i])
+        const processed = Math.min((i + 1) * BATCH_SIZE, selectedTxns.length)
+        setImportProgress({ current: processed, total: selectedTxns.length })
+      }
+
+      toast({
+        title: 'Import complete',
+        description: `Imported ${selectedTxns.length} transactions`,
+      })
+
+      onOpenChange(false)
+      resetDialog()
+    } catch (error) {
+      console.error('Import failed:', error)
+      toast({
+        title: 'Failed to import transactions',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      })
+      setStep('review')
     }
-
-    toast({
-      title: 'Import complete',
-      description: `Imported ${imported} transactions${errors > 0 ? `, ${errors} failed` : ''}`,
-      variant: errors > 0 ? 'destructive' : 'default',
-    })
-
-    onOpenChange(false)
-    resetDialog()
   }
 
   const resetDialog = () => {

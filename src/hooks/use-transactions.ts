@@ -94,6 +94,54 @@ export function useCreateTransactionsBulk() {
   })
 }
 
+export function useUpdateTransactionsBulk() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (
+      updates: Array<{ id: string; data: Partial<TransactionFormData> }>
+    ) => {
+      // Fetch raw rows to get row indices
+      const rows = await sheetsClient.transactions().getRows()
+
+      // Map transaction IDs to row indices
+      const rowUpdates = updates.map(({ id, data }) => {
+        const rowIndex = rows.findIndex(r => r.id === id)
+        if (rowIndex === -1) {
+          throw new Error(`Transaction not found: ${id}`)
+        }
+
+        const transaction = parseTransactionRow(rows[rowIndex])
+
+        // Normalize amount if provided
+        let updateData = { ...data }
+        if (data.amount !== undefined) {
+          let amount = Math.abs(data.amount)
+          if (data.type === 'expense' || transaction.type === 'expense') {
+            amount = -amount
+          }
+          updateData.amount = amount
+        }
+
+        const serialized = serializeTransaction({
+          ...transaction,
+          ...updateData
+        } as Transaction)
+
+        return {
+          rowIndex: rowIndex + 2, // +2 for header and 1-indexed
+          data: serialized
+        }
+      })
+
+      await sheetsClient.transactions().updateRowsBulk(rowUpdates)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all })
+    }
+  })
+}
+
 export function useCreateTransfer() {
   const queryClient = useQueryClient()
 

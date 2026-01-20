@@ -1,6 +1,20 @@
 import { SHEETS_API_URL, STORAGE_KEYS, SHEET_NAMES } from './constants'
 import type { AccountRow, CategoryRow, TransactionRow } from '@/types'
 
+export interface BulkCreateRowsResponse {
+  rows: Array<{
+    rowIndex: number
+    data: Record<string, unknown>
+  }>
+}
+
+export interface BulkUpdateRowsResponse {
+  rows: Array<{
+    rowIndex: number
+    data: Record<string, unknown>
+  }>
+}
+
 class SheetsClient {
   private baseUrl: string
   private spreadsheetId: string | null = null

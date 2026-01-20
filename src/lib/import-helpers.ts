@@ -1,5 +1,5 @@
 import type { TransactionFormData, Transaction, Category } from '@/types'
-import { categorizeTransactions } from '@/lib/ai-categorization'
+import { categorizeTransactions, BATCH_SIZE } from '@/lib/ai-categorization'
 import { STORAGE_KEYS } from '@/lib/constants'
 
 /**
@@ -12,12 +12,18 @@ import { STORAGE_KEYS } from '@/lib/constants'
  * @param parsedTransactions - The imported transactions to categorize
  * @param categories - Available categories from the database
  * @param existingTransactions - Historical transactions for context
+ * @param onProgressStart - Optional callback when categorization starts
+ * @param onProgressUpdate - Optional callback for progress updates
+ * @param onProgressComplete - Optional callback when categorization completes
  * @returns The transactions with AI-suggested category_id values applied where confident
  */
 export async function applyAutoCategorization(
   parsedTransactions: TransactionFormData[],
   categories: Category[] | undefined,
-  existingTransactions: Transaction[] | undefined
+  existingTransactions: Transaction[] | undefined,
+  onProgressStart?: (totalBatches: number) => void,
+  onProgressUpdate?: (completed: number, total: number) => void,
+  onProgressComplete?: () => void
 ): Promise<TransactionFormData[]> {
   // Check if auto-categorize is enabled
   const autoCategorize = localStorage.getItem(STORAGE_KEYS.AUTO_CATEGORIZE_ON_IMPORT) === 'true'
@@ -49,18 +55,33 @@ export async function applyAutoCategorization(
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 10)
 
-  // Get AI suggestions
-  const suggestions = await categorizeTransactions(
-    tempTransactions,
-    categories,
-    apiKey,
-    historical
+  // Calculate total batches for progress
+  const uncategorized = tempTransactions.filter(
+    (t) => t.type !== 'transfer' && !t.category_id
   )
+  const totalBatches = Math.ceil(uncategorized.length / BATCH_SIZE)
 
-  // Apply suggestions back to parsed transactions
-  return parsedTransactions.map((t, index) => {
-    const tempId = `temp-${index}`
-    const suggestedCategoryId = suggestions.get(tempId)
-    return suggestedCategoryId ? { ...t, category_id: suggestedCategoryId } : t
-  })
+  // Notify progress start
+  onProgressStart?.(totalBatches)
+
+  try {
+    // Get AI suggestions with progress callback
+    const suggestions = await categorizeTransactions(
+      tempTransactions,
+      categories,
+      apiKey,
+      historical,
+      (completed, total) => onProgressUpdate?.(completed, total)
+    )
+
+    // Apply suggestions back to parsed transactions
+    return parsedTransactions.map((t, index) => {
+      const tempId = `temp-${index}`
+      const suggestedCategoryId = suggestions.get(tempId)
+      return suggestedCategoryId ? { ...t, category_id: suggestedCategoryId } : t
+    })
+  } finally {
+    // Always complete progress, even on error
+    onProgressComplete?.()
+  }
 }

@@ -106,6 +106,20 @@ class SheetsClient {
     })
   }
 
+  async createRowsBulk(
+    sheetName: string,
+    rows: Record<string, string | number | boolean | null | undefined>[]
+  ): Promise<BulkCreateRowsResponse> {
+    const response = await this.request(
+      `/sheets/${encodeURIComponent(sheetName)}/rows/bulk`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ rows }),
+      }
+    )
+    return response as BulkCreateRowsResponse
+  }
+
   async updateRow(
     sheetName: string,
     rowIndex: number,
@@ -115,6 +129,23 @@ class SheetsClient {
       method: 'PUT',
       body: JSON.stringify(data),
     })
+  }
+
+  async updateRowsBulk(
+    sheetName: string,
+    updates: Array<{
+      rowIndex: number
+      data: Record<string, string | number | boolean | null | undefined>
+    }>
+  ): Promise<BulkUpdateRowsResponse> {
+    const response = await this.request(
+      `/sheets/${encodeURIComponent(sheetName)}/rows/bulk`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ rows: updates }),
+      }
+    )
+    return response as BulkUpdateRowsResponse
   }
 
   async deleteRow(sheetName: string, rowIndex: number): Promise<void> {

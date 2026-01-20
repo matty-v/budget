@@ -185,6 +185,10 @@ class SheetsClient {
       updateRow: (rowIndex: number, data: Partial<TransactionRow>) =>
         this.updateRow(SHEET_NAMES.TRANSACTIONS, rowIndex, data as unknown as Record<string, string>),
       deleteRow: (rowIndex: number) => this.deleteRow(SHEET_NAMES.TRANSACTIONS, rowIndex),
+      createRowsBulk: (rows: TransactionRow[]) =>
+        this.createRowsBulk(SHEET_NAMES.TRANSACTIONS, rows as unknown as Record<string, string>[]),
+      updateRowsBulk: (updates: Array<{ rowIndex: number; data: Partial<TransactionRow> }>) =>
+        this.updateRowsBulk(SHEET_NAMES.TRANSACTIONS, updates as unknown as Array<{ rowIndex: number; data: Record<string, string> }>),
     }
   }
 }

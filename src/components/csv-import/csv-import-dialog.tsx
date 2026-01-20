@@ -28,6 +28,7 @@ import {
   type CSVBankParser,
 } from '@/lib/csv-parsers'
 import { applyAutoCategorization } from '@/lib/import-helpers'
+import { useCategorizationProgress } from '@/hooks/use-categorization-progress'
 import { Loader2, Upload, Check, AlertCircle, FileText } from 'lucide-react'
 import type { TransactionFormData } from '@/types'
 
@@ -48,6 +49,7 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
   const { data: categories } = useCategories()
   const { data: existingTransactions } = useTransactions()
   const createTransactionsBulk = useCreateTransactionsBulk()
+  const { startProgress, updateProgress, completeProgress } = useCategorizationProgress()
 
   const processCSVFile = useCallback(
     async (file: File) => {
@@ -109,7 +111,10 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
         const categorized = await applyAutoCategorization(
           formDataTransactions,
           categories,
-          existingTransactions
+          existingTransactions,
+          (total) => startProgress(total),
+          (completed, total) => updateProgress(completed, total),
+          () => completeProgress()
         )
 
         // Apply categories back to importable transactions
@@ -130,7 +135,7 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
         setIsProcessing(false)
       }
     },
-    [existingTransactions, categories]
+    [existingTransactions, categories, startProgress, updateProgress, completeProgress]
   )
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

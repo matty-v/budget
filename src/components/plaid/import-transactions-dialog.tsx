@@ -20,7 +20,7 @@ import {
 import { plaidClient, PlaidTransaction } from '@/lib/plaid-client';
 import { useAccounts } from '@/hooks/use-accounts';
 import { useCategories } from '@/hooks/use-categories';
-import { useCreateTransaction, useTransactions } from '@/hooks/use-transactions';
+import { useCreateTransactionsBulk, useTransactions } from '@/hooks/use-transactions';
 import { toast } from '@/hooks/use-toast';
 import { formatCurrency, toISODateString } from '@/lib/utils';
 import { Loader2, Download, Check } from 'lucide-react';
@@ -53,7 +53,7 @@ export function ImportTransactionsDialog({ open, onOpenChange }: ImportTransacti
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   const { data: existingTransactions } = useTransactions();
-  const createTransaction = useCreateTransaction();
+  const createTransactionsBulk = useCreateTransactionsBulk();
 
   const fetchTransactions = async () => {
     setIsLoading(true);
@@ -175,15 +175,13 @@ export function ImportTransactionsDialog({ open, onOpenChange }: ImportTransacti
     setStep('importing');
     setImportProgress({ current: 0, total: selectedTransactions.length });
 
-    let imported = 0;
-    let errors = 0;
-
-    for (const t of selectedTransactions) {
-      try {
+    try {
+      // Prepare all transactions
+      const txnsToImport: TransactionFormData[] = selectedTransactions.map(t => {
         // Plaid uses positive amounts for expenses (money going out)
         const isExpense = t.amount > 0;
 
-        const formData: TransactionFormData = {
+        return {
           type: isExpense ? 'expense' : 'income',
           description: t.merchant_name || t.name,
           amount: Math.abs(t.amount),
@@ -193,25 +191,38 @@ export function ImportTransactionsDialog({ open, onOpenChange }: ImportTransacti
           notes: `Imported from ${t.institution.name}`,
           plaid_transaction_id: t.transaction_id, // Store for duplicate detection
         };
+      });
 
-        await createTransaction.mutateAsync(formData);
-        imported++;
-      } catch (error) {
-        console.error('Failed to import transaction:', t.name, error);
-        errors++;
+      // Split into batches of 100
+      const BATCH_SIZE = 100;
+      const batches: TransactionFormData[][] = [];
+      for (let i = 0; i < txnsToImport.length; i += BATCH_SIZE) {
+        batches.push(txnsToImport.slice(i, i + BATCH_SIZE));
       }
 
-      setImportProgress({ current: imported + errors, total: selectedTransactions.length });
+      // Process each batch
+      for (let i = 0; i < batches.length; i++) {
+        await createTransactionsBulk.mutateAsync(batches[i]);
+        const processed = Math.min((i + 1) * BATCH_SIZE, txnsToImport.length);
+        setImportProgress({ current: processed, total: txnsToImport.length });
+      }
+
+      toast({
+        title: 'Import complete',
+        description: `Imported ${txnsToImport.length} transactions`,
+      });
+
+      onOpenChange(false);
+      resetDialog();
+    } catch (error) {
+      console.error('Import failed:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to import transactions',
+        variant: 'destructive',
+      });
+      setStep('review');
     }
-
-    toast({
-      title: 'Import complete',
-      description: `Imported ${imported} transactions${errors > 0 ? `, ${errors} failed` : ''}`,
-      variant: errors > 0 ? 'destructive' : 'success',
-    });
-
-    onOpenChange(false);
-    resetDialog();
   };
 
   const resetDialog = () => {

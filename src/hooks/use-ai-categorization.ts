@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useCategories } from './use-categories'
-import { useTransactions, useUpdateTransaction } from './use-transactions'
+import { useTransactions, useUpdateTransactionsBulk } from './use-transactions'
 import { categorizeTransactions } from '@/lib/ai-categorization'
 import { queryKeys } from '@/lib/query-keys'
 import { STORAGE_KEYS } from '@/lib/constants'
@@ -15,7 +15,7 @@ export function useCategorizeTransactions() {
   const queryClient = useQueryClient()
   const { data: categories } = useCategories()
   const { data: allTransactions } = useTransactions()
-  const { mutateAsync: updateTransaction } = useUpdateTransaction()
+  const updateTransactionsBulk = useUpdateTransactionsBulk()
 
   return useMutation({
     mutationFn: async (transactionIds: string[]): Promise<CategorizeResult> => {
@@ -47,35 +47,21 @@ export function useCategorizeTransactions() {
         historicalTransactions
       )
 
-      // Apply suggestions
-      let categorized = 0
-      for (const [transactionId, categoryId] of suggestions) {
-        const transaction = transactionsToProcess.find((t) => t.id === transactionId)
-        if (transaction) {
-          try {
-            await updateTransaction({
-              id: transactionId,
-              data: {
-                date: transaction.date,
-                description: transaction.description,
-                amount: Math.abs(transaction.amount),
-                type: transaction.type,
-                category_id: categoryId,
-                source_account_id: transaction.source_account_id,
-                notes: transaction.notes,
-              },
-            })
-            categorized++
-          } catch (error) {
-            console.error('Failed to update transaction:', transactionId, error)
-          }
-        }
+      // Convert suggestions Map to bulk update format
+      const updates = Array.from(suggestions.entries()).map(([txnId, categoryId]) => ({
+        id: txnId,
+        data: { category_id: categoryId }
+      }))
+
+      // Single bulk update call instead of loop
+      if (updates.length > 0) {
+        await updateTransactionsBulk.mutateAsync(updates)
       }
 
       return {
         total: transactionsToProcess.length,
-        categorized,
-        failed: transactionsToProcess.length - categorized,
+        categorized: suggestions.size,
+        failed: transactionsToProcess.length - suggestions.size,
       }
     },
     onSuccess: () => {

@@ -145,7 +145,7 @@ ${categoriesJson}
   // Add historical examples if available
   if (historicalTransactions && historicalTransactions.length > 0) {
     const examples = historicalTransactions
-      .filter((t) => t.category_id !== null && t.category_id !== '')
+      .filter((t) => t.category_id !== null && t.category_id !== '' && t.type === transactionType)
       .slice(0, 10)
       .map((t) => ({
         description: t.description,
@@ -263,21 +263,35 @@ export async function categorizeTransactions(
     return allResults
   }
 
-  // Split into batches of BATCH_SIZE
-  const batches = chunk(toProcess, BATCH_SIZE)
+  // Group by transaction type to ensure batches only contain one type
+  const byType: Record<string, Transaction[]> = {
+    income: toProcess.filter((t) => t.type === 'income'),
+    expense: toProcess.filter((t) => t.type === 'expense'),
+  }
 
-  // Process each batch sequentially
-  for (const batch of batches) {
-    const batchResults = await processBatch(
-      batch,
-      categories,
-      apiKey,
-      historicalTransactions
-    )
+  // Process each type separately
+  for (const [type, txns] of Object.entries(byType)) {
+    if (txns.length === 0) continue
 
-    // Merge batch results into overall results
-    for (const [txnId, catId] of batchResults) {
-      allResults.set(txnId, catId)
+    // Split into batches of BATCH_SIZE
+    const batches = chunk(txns, BATCH_SIZE)
+
+    // Filter historical examples by type for better accuracy
+    const historicalForType = historicalTransactions?.filter((h) => h.type === type)
+
+    // Process each batch sequentially
+    for (const batch of batches) {
+      const batchResults = await processBatch(
+        batch,
+        categories,
+        apiKey,
+        historicalForType
+      )
+
+      // Merge batch results into overall results
+      for (const [txnId, catId] of batchResults) {
+        allResults.set(txnId, catId)
+      }
     }
   }
 

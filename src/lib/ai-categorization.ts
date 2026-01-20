@@ -250,7 +250,8 @@ export async function categorizeTransactions(
   transactions: Transaction[],
   categories: Category[],
   apiKey: string,
-  historicalTransactions?: Transaction[]
+  historicalTransactions?: Transaction[],
+  onBatchComplete?: (completedBatches: number, totalBatches: number) => void
 ): Promise<Map<string, string>> {
   const allResults = new Map<string, string>()
 
@@ -268,6 +269,14 @@ export async function categorizeTransactions(
     income: toProcess.filter((t) => t.type === 'income'),
     expense: toProcess.filter((t) => t.type === 'expense'),
   }
+
+  // Calculate total batches across all types for progress tracking
+  let totalBatches = 0
+  for (const txns of Object.values(byType)) {
+    totalBatches += Math.ceil(txns.length / BATCH_SIZE)
+  }
+
+  let completedBatches = 0
 
   // Process each type separately
   for (const [type, txns] of Object.entries(byType)) {
@@ -292,6 +301,10 @@ export async function categorizeTransactions(
       for (const [txnId, catId] of batchResults) {
         allResults.set(txnId, catId)
       }
+
+      // Report progress
+      completedBatches++
+      onBatchComplete?.(completedBatches, totalBatches)
     }
   }
 

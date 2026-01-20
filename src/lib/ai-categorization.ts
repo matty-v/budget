@@ -22,7 +22,7 @@ interface BulkCategorizationResult {
 const PROXY_URL = 'https://proxy-g56q77hy2a-uc.a.run.app/api.anthropic.com/v1/messages'
 const MODEL = 'claude-haiku-4-5-20251001'
 const MAX_TOKENS = 4096  // Sufficient for 50 transaction batch with safety margin
-const BATCH_SIZE = 50
+export const BATCH_SIZE = 50
 const ANTHROPIC_VERSION = '2023-06-01'
 
 /**

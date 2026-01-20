@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useCategories } from './use-categories'
 import { useTransactions, useUpdateTransactionsBulk } from './use-transactions'
-import { categorizeTransactions } from '@/lib/ai-categorization'
+import { categorizeTransactions, BATCH_SIZE } from '@/lib/ai-categorization'
+import { useCategorizationProgress } from './use-categorization-progress'
 import { queryKeys } from '@/lib/query-keys'
 import { STORAGE_KEYS } from '@/lib/constants'
+import { toast } from 'sonner'
 
 interface CategorizeResult {
   total: number
@@ -16,6 +18,7 @@ export function useCategorizeTransactions() {
   const { data: categories } = useCategories()
   const { data: allTransactions } = useTransactions()
   const updateTransactionsBulk = useUpdateTransactionsBulk()
+  const { startProgress, updateProgress, completeProgress } = useCategorizationProgress()
 
   return useMutation({
     mutationFn: async (transactionIds: string[]): Promise<CategorizeResult> => {
@@ -39,12 +42,22 @@ export function useCategorizeTransactions() {
         .filter((t) => t.category_id && t.type !== 'transfer')
         .slice(0, 10)
 
-      // Call AI service
+      // Calculate total batches for progress
+      const uncategorized = transactionsToProcess.filter(
+        (t) => t.type !== 'transfer' && !t.category_id
+      )
+      const totalBatches = Math.ceil(uncategorized.length / BATCH_SIZE)
+
+      // Start progress toast
+      startProgress(totalBatches)
+
+      // Call AI service with progress callback
       const suggestions = await categorizeTransactions(
         transactionsToProcess,
         categories,
         apiKey,
-        historicalTransactions
+        historicalTransactions,
+        (completed, total) => updateProgress(completed, total)
       )
 
       // Convert suggestions Map to bulk update format
@@ -64,8 +77,16 @@ export function useCategorizeTransactions() {
         failed: transactionsToProcess.length - suggestions.size,
       }
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      completeProgress()
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all })
+      toast.success(`Successfully categorized ${result.categorized} transactions`)
+    },
+    onError: (error) => {
+      completeProgress()
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to categorize transactions'
+      )
     },
   })
 }

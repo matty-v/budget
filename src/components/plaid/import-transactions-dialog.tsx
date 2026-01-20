@@ -21,6 +21,7 @@ import { plaidClient, PlaidTransaction } from '@/lib/plaid-client';
 import { useAccounts } from '@/hooks/use-accounts';
 import { useCategories } from '@/hooks/use-categories';
 import { useCreateTransactionsBulk, useTransactions } from '@/hooks/use-transactions';
+import { useCategorizationProgress } from '@/hooks/use-categorization-progress';
 import { toast } from '@/hooks/use-toast';
 import { formatCurrency, toISODateString } from '@/lib/utils';
 import { Loader2, Download, Check } from 'lucide-react';
@@ -54,6 +55,7 @@ export function ImportTransactionsDialog({ open, onOpenChange }: ImportTransacti
   const { data: categories } = useCategories();
   const { data: existingTransactions } = useTransactions();
   const createTransactionsBulk = useCreateTransactionsBulk();
+  const { startProgress, updateProgress, completeProgress } = useCategorizationProgress();
 
   const fetchTransactions = async () => {
     setIsLoading(true);
@@ -100,7 +102,10 @@ export function ImportTransactionsDialog({ open, onOpenChange }: ImportTransacti
       const withCategories = await applyAutoCategorization(
         parsedTransactions,
         categories,
-        existingTransactions
+        existingTransactions,
+        (total) => startProgress(total),
+        (completed, total) => updateProgress(completed, total),
+        () => completeProgress()
       );
 
       // Convert to ImportableTransaction format

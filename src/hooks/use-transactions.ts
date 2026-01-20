@@ -114,7 +114,7 @@ export function useUpdateTransactionsBulk() {
         const transaction = parseTransactionRow(rows[rowIndex])
 
         // Normalize amount if provided
-        let updateData = { ...data }
+        const updateData = { ...data }
         if (data.amount !== undefined) {
           let amount = Math.abs(data.amount)
           if (data.type === 'expense' || transaction.type === 'expense') {

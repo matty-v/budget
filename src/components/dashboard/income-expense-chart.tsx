@@ -101,18 +101,18 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
                 type="monotone"
                 dataKey="income"
                 name="Income"
-                stroke="#22c55e"
+                stroke="#00d4ff"
                 strokeWidth={2}
-                dot={{ fill: '#22c55e', r: 4 }}
+                dot={{ fill: '#00d4ff', r: 4 }}
                 activeDot={{ r: 6 }}
               />
               <Line
                 type="monotone"
                 dataKey="expenses"
                 name="Expenses"
-                stroke="#ef4444"
+                stroke="#ec4899"
                 strokeWidth={2}
-                dot={{ fill: '#ef4444', r: 4 }}
+                dot={{ fill: '#ec4899', r: 4 }}
                 activeDot={{ r: 6 }}
               />
             </LineChart>

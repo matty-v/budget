@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import {
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -74,7 +74,7 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
       <CardContent>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data}>
+            <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis
                 dataKey="month"
@@ -97,19 +97,25 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
                 }}
               />
               <Legend />
-              <Bar
+              <Line
+                type="monotone"
                 dataKey="income"
                 name="Income"
-                fill="#22c55e"
-                radius={[4, 4, 0, 0]}
+                stroke="#22c55e"
+                strokeWidth={2}
+                dot={{ fill: '#22c55e', r: 4 }}
+                activeDot={{ r: 6 }}
               />
-              <Bar
+              <Line
+                type="monotone"
                 dataKey="expenses"
                 name="Expenses"
-                fill="#ef4444"
-                radius={[4, 4, 0, 0]}
+                stroke="#ef4444"
+                strokeWidth={2}
+                dot={{ fill: '#ef4444', r: 4 }}
+                activeDot={{ r: 6 }}
               />
-            </BarChart>
+            </LineChart>
           </ResponsiveContainer>
         </div>
       </CardContent>

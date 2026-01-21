@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
 import type { Transaction, Category } from '@/types'
@@ -60,20 +60,23 @@ export function SpendingByCategory({ transactions, categories }: SpendingByCateg
       <CardContent>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={50}
-                outerRadius={80}
-                paddingAngle={2}
-                dataKey="value"
-              >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
+            <BarChart data={data} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis
+                type="number"
+                tick={{ fontSize: 12 }}
+                stroke="hsl(var(--muted-foreground))"
+                tickFormatter={(value) =>
+                  value >= 1000 ? `$${(value / 1000).toFixed(0)}k` : `$${value}`
+                }
+              />
+              <YAxis
+                type="category"
+                dataKey="name"
+                tick={{ fontSize: 12 }}
+                stroke="hsl(var(--muted-foreground))"
+                width={120}
+              />
               <Tooltip
                 formatter={(value) => formatCurrency(Number(value))}
                 contentStyle={{
@@ -82,12 +85,12 @@ export function SpendingByCategory({ transactions, categories }: SpendingByCateg
                   borderRadius: '8px',
                 }}
               />
-              <Legend
-                formatter={(value) => (
-                  <span className="text-sm text-foreground">{value}</span>
-                )}
+              <Bar
+                dataKey="value"
+                radius={[0, 4, 4, 0]}
+                fill="#8b5cf6"
               />
-            </PieChart>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </CardContent>

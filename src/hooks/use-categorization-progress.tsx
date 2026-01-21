@@ -6,7 +6,7 @@ export function useCategorizationProgress() {
   const [toastId, setToastId] = useState<string | number | undefined>()
   const progressRef = useRef(0)
 
-  const startProgress = useCallback((_totalBatches: number) => {
+  const startProgress = useCallback(() => {
     progressRef.current = 0
 
     const id = toast(

@@ -103,7 +103,7 @@ export function ImportTransactionsDialog({ open, onOpenChange }: ImportTransacti
         parsedTransactions,
         categories,
         existingTransactions,
-        (total) => startProgress(total),
+        () => startProgress(),
         (completed, total) => updateProgress(completed, total),
         () => completeProgress()
       );

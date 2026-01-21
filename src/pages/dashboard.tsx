@@ -4,15 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { TransactionItem } from '@/components/transactions/transaction-item'
 import { SpendingByCategory, IncomeExpenseChart, BudgetOverview } from '@/components/dashboard'
-import { useTotalBalance } from '@/hooks/use-accounts'
 import { useTransactions, useRecentTransactions, useMonthlyTotals } from '@/hooks/use-transactions'
 import { useCategories } from '@/hooks/use-categories'
 import { useAccounts } from '@/hooks/use-accounts'
 import { formatCurrency } from '@/lib/utils'
-import { ArrowRight, Loader2, TrendingUp, TrendingDown, Wallet } from 'lucide-react'
+import { ArrowRight, Loader2, TrendingUp, TrendingDown } from 'lucide-react'
 
 export function DashboardPage() {
-  const totalBalance = useTotalBalance()
   const { income, expenses } = useMonthlyTotals()
   const { data: allTransactions } = useTransactions()
   const { data: recentTransactions, isLoading } = useRecentTransactions(5)
@@ -23,20 +21,22 @@ export function DashboardPage() {
     <div className="space-y-6">
       <PageHeader title="Dashboard" />
 
-      {/* Balance Overview */}
-      <Card className="bg-primary text-primary-foreground dark:bg-secondary dark:text-secondary-foreground">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium opacity-80 flex items-center gap-2">
-            <Wallet className="h-4 w-4" />
-            Total Balance
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold">{formatCurrency(totalBalance)}</div>
-        </CardContent>
-      </Card>
+      {/* Spending Categories Bar Chart */}
+      <SpendingByCategory
+        transactions={allTransactions ?? []}
+        categories={categories ?? []}
+      />
 
-      {/* Income vs Expenses */}
+      {/* Budget Overview */}
+      <BudgetOverview
+        transactions={allTransactions ?? []}
+        categories={categories ?? []}
+      />
+
+      {/* Income vs Expenses Line Chart */}
+      <IncomeExpenseChart transactions={allTransactions ?? []} />
+
+      {/* Individual Income and Expenses by Month */}
       <div className="grid grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -67,21 +67,6 @@ export function DashboardPage() {
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Budget Overview */}
-      <BudgetOverview
-        transactions={allTransactions ?? []}
-        categories={categories ?? []}
-      />
-
-      {/* Charts */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <SpendingByCategory
-          transactions={allTransactions ?? []}
-          categories={categories ?? []}
-        />
-        <IncomeExpenseChart transactions={allTransactions ?? []} />
       </div>
 
       {/* Recent Transactions */}

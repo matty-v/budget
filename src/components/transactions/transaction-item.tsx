@@ -23,7 +23,7 @@ export function TransactionItem({
   const isTransfer = transaction.type === 'transfer'
 
   return (
-    <Card>
+    <Card className="glass-card-hover">
       <CardContent className="p-4">
         <div className="flex items-center gap-3">
           {category ? (
@@ -34,7 +34,7 @@ export function TransactionItem({
               {category.icon}
             </div>
           ) : (
-            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-lg flex-shrink-0">
+            <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-lg flex-shrink-0">
               {isTransfer ? '↔️' : '📝'}
             </div>
           )}
@@ -50,7 +50,11 @@ export function TransactionItem({
           <div
             className={cn(
               'font-semibold whitespace-nowrap',
-              isExpense ? 'text-red-600' : 'text-green-600'
+              isTransfer
+                ? 'amount-transfer'
+                : isExpense
+                  ? 'amount-negative'
+                  : 'amount-positive'
             )}
           >
             {isExpense ? '' : '+'}

@@ -1,0 +1,52 @@
+name: PR Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    # Skip cleanup job if PR was merged or closed
+    if: github.event.action != 'closed'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy to Firebase Preview Channel
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          projectId: kinetic-object-322814
+          target: matty-budget-app
+          expires: 7d  # Preview will expire after 7 days
+
+  cleanup:
+    runs-on: ubuntu-latest
+    # Only run cleanup when PR is closed/merged
+    if: github.event.action == 'closed'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cleanup Firebase Preview Channel
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          projectId: kinetic-object-322814
+          target: matty-budget-app
+          expires: 0d  # Immediately expire the preview

@@ -40,3 +40,7 @@ lerna-debug.log*
 test-results/
 playwright-report/
 playwright/.cache/
+
+# Firebase
+.firebase/
+firebase-debug.log

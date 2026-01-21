@@ -42,12 +42,6 @@ export function useCategorizeTransactions() {
         .filter((t) => t.category_id && t.type !== 'transfer')
         .slice(0, 10)
 
-      // Calculate total batches for progress
-      const uncategorized = transactionsToProcess.filter(
-        (t) => t.type !== 'transfer' && !t.category_id
-      )
-      const totalBatches = Math.ceil(uncategorized.length / BATCH_SIZE)
-
       // Start progress toast
       startProgress()
 

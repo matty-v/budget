@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useCategories } from './use-categories'
 import { useTransactions, useUpdateTransactionsBulk } from './use-transactions'
-import { categorizeTransactions, BATCH_SIZE } from '@/lib/ai-categorization'
+import { categorizeTransactions } from '@/lib/ai-categorization'
 import { useCategorizationProgress } from './use-categorization-progress'
 import { queryKeys } from '@/lib/query-keys'
 import { STORAGE_KEYS } from '@/lib/constants'

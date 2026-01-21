@@ -51,3 +51,45 @@ The Plaid server requires environment variables in `server/.env`:
 - `PLAID_ENV` (sandbox/development/production)
 
 Copy `server/.env.example` to `server/.env` and fill in credentials from Plaid Dashboard.
+
+## Code Style
+
+- **TypeScript**: Strict mode enabled. Avoid `any` types; prefer explicit typing or inference.
+- **React Components**: Use functional components with hooks. Follow the `useX`, `useCreateX`, `useUpdateX`, `useDeleteX` naming pattern for TanStack Query hooks.
+- **Imports**: Use the `@/` path alias for src imports (e.g., `@/components/Button`).
+- **UI Components**: Use Radix UI primitives with Tailwind CSS for styling. Component variants should use `class-variance-authority`.
+- **State Management**: Server state via TanStack Query. Local UI state via React hooks.
+- **Formatting**: ESLint enforces code style. Run `npm run lint` before committing.
+
+## Testing
+
+- **E2E Tests**: Playwright tests in `/tests` directory
+  - Run: `npm run test:e2e`
+  - Interactive: `npm run test:e2e:ui`
+- **No unit tests currently** - E2E covers critical user flows
+
+## PR Guidelines
+
+- Keep PRs focused on a single feature or fix
+- Ensure `npm run build` passes (includes TypeScript check)
+- Ensure `npm run lint` passes
+- Test affected user flows manually or with E2E tests
+- Update CLAUDE.md if adding new patterns or architecture changes
+
+## Security Notes
+
+- **Never commit secrets**: `.env` files, API keys, credentials
+- **Plaid tokens**: Handle with care, never log full tokens
+- **Google Sheets API**: Spreadsheet ID stored in localStorage (user-specific)
+- **Input validation**: Validate transaction amounts, dates, and category references
+- **No direct database access**: All data goes through Sheets DB API
+
+## Review Checklist
+
+- [ ] TypeScript compiles without errors
+- [ ] ESLint passes
+- [ ] No console.log statements in production code
+- [ ] Loading and error states handled for async operations
+- [ ] Financial calculations use proper number handling (avoid floating point issues)
+- [ ] New hooks follow existing patterns in `src/hooks/`
+- [ ] Transformers updated if sheet schema changes

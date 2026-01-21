@@ -6,12 +6,6 @@ import { queryClient } from '@/lib/query-client'
 import App from './App'
 import './index.css'
 
-// Apply theme before render to prevent flash
-const theme = localStorage.getItem('budget-app-theme') || 'system'
-const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-const effectiveTheme = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme
-document.documentElement.classList.add(effectiveTheme)
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

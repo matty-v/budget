@@ -49,7 +49,7 @@ export function useCategorizeTransactions() {
       const totalBatches = Math.ceil(uncategorized.length / BATCH_SIZE)
 
       // Start progress toast
-      startProgress(totalBatches)
+      startProgress()
 
       // Call AI service with progress callback
       const suggestions = await categorizeTransactions(

@@ -112,7 +112,7 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
           formDataTransactions,
           categories,
           existingTransactions,
-          (total) => startProgress(total),
+          () => startProgress(),
           (completed, total) => updateProgress(completed, total),
           () => completeProgress()
         )

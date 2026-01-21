@@ -12,7 +12,7 @@ export function AppShell({ children }: AppShellProps) {
       <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b border-border">
         <div className="container max-w-lg mx-auto px-4 h-12 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 font-semibold text-foreground">
-            <img src={`${import.meta.env.BASE_URL}app-icon.png`} alt="" className="h-6 w-6 rounded" />
+            <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" className="h-6 w-6" />
             Voget Budget
           </Link>
         </div>

@@ -1,33 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1e1e2e"/>
-      <stop offset="100%" style="stop-color:#0f0f1a"/>
+      <stop offset="0%" style="stop-color:#0f1419"/>
+      <stop offset="100%" style="stop-color:#0a0d14"/>
     </linearGradient>
-    <linearGradient id="greenGradient" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#22c55e"/>
-      <stop offset="100%" style="stop-color:#4ade80"/>
+    <linearGradient id="neonGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00d4ff"/>
+      <stop offset="100%" style="stop-color:#a78bfa"/>
     </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="16" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="nodeGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="24" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
 
-  <!-- Rounded square background - dark theme -->
+  <!-- Rounded square background -->
   <rect x="0" y="0" width="1024" height="1024" rx="224" ry="224" fill="url(#bgGradient)"/>
 
-  <!-- V shape with right side becoming upward arrow - centered -->
-  <path d="M 180 240
-           L 300 240
-           L 512 620
-           L 724 300
-           L 844 160
-           L 744 160
-           L 744 100
-           L 924 100
-           L 924 280
-           L 864 280
-           L 864 200
-           L 724 380
-           L 512 740
-           L 180 360
-           Z"
-        fill="url(#greenGradient)"/>
+  <!-- Ascending line with dip -->
+  <path d="M 140 780 L 380 420 L 560 540 L 884 140"
+        fill="none"
+        stroke="url(#neonGradient)"
+        stroke-width="48"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        filter="url(#glow)"/>
+
+  <!-- Data points -->
+  <circle cx="140" cy="780" r="52" fill="#00d4ff" filter="url(#nodeGlow)"/>
+  <circle cx="380" cy="420" r="52" fill="#22d3ee" filter="url(#nodeGlow)"/>
+  <circle cx="560" cy="540" r="52" fill="#6ee7b7" filter="url(#nodeGlow)"/>
+  <circle cx="884" cy="140" r="52" fill="#a78bfa" filter="url(#nodeGlow)"/>
 </svg>

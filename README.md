@@ -101,6 +101,8 @@ npm run test:e2e:ui  # Run E2E tests with UI
 
 The `@/` alias maps to `./src/` for cleaner imports.
 
+This is a test line.
+
 ## License
 
 Private project

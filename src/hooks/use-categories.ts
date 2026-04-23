@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { sheetsClient } from '@/lib/sheets-client'
 import { queryKeys } from '@/lib/query-keys'
-import { parseCategoryRow, serializeCategory, serializeCategoryUpdate } from '@/lib/transformers'
+import { parseCategoryRow, serializeCategory } from '@/lib/transformers'
 import type { Category, CategoryFormData, CategoryRow, CategoryType } from '@/types'
 
 export function useCategories() {
@@ -42,6 +42,28 @@ export function useCreateCategory() {
   })
 }
 
+// The sheets-db-api's updateRow endpoint is PUT-semantic: fields not in the
+// payload get blanked. Always merge partial updates into the full existing row
+// before sending so columns like is_active, name, type, etc. are preserved.
+function mergeCategoryUpdate(
+  existing: CategoryRow,
+  patch: Partial<CategoryFormData>
+): CategoryRow {
+  const merged: CategoryRow = { ...existing }
+  if (patch.name !== undefined) merged.name = patch.name
+  if (patch.type !== undefined) merged.type = patch.type
+  if (patch.icon !== undefined) merged.icon = patch.icon
+  if (patch.color !== undefined) merged.color = patch.color
+  if (patch.budget_amount !== undefined) {
+    merged.budget_amount = patch.budget_amount !== null ? String(patch.budget_amount) : ''
+  }
+  if (patch.budget_cadence !== undefined) {
+    merged.budget_cadence = patch.budget_cadence ?? ''
+  }
+  merged.updated_at = new Date().toISOString()
+  return merged
+}
+
 export function useUpdateCategory() {
   const queryClient = useQueryClient()
 
@@ -59,8 +81,8 @@ export function useUpdateCategory() {
         throw new Error('Category not found')
       }
 
-      const updateData = serializeCategoryUpdate(data)
-      await sheetsClient.categories().updateRow(rowIndex + 2, updateData)
+      const merged = mergeCategoryUpdate(rows[rowIndex], data)
+      await sheetsClient.categories().updateRow(rowIndex + 2, merged)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.categories.all })
@@ -79,10 +101,12 @@ export function useDeleteCategory() {
         throw new Error('Category not found')
       }
 
-      await sheetsClient.categories().updateRow(rowIndex + 2, {
+      const merged: CategoryRow = {
+        ...rows[rowIndex],
         is_active: 'false',
         updated_at: new Date().toISOString(),
-      } as Partial<CategoryRow>)
+      }
+      await sheetsClient.categories().updateRow(rowIndex + 2, merged)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.categories.all })

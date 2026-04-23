@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { sheetsClient } from '@/lib/sheets-client'
 import { queryKeys } from '@/lib/query-keys'
-import { parseBudgetRow, serializeBudget, serializeBudgetUpdate } from '@/lib/transformers'
-import type { Budget, BudgetFormData, BudgetPeriodType, Category } from '@/types'
+import { parseBudgetRow, serializeBudget } from '@/lib/transformers'
+import type { Budget, BudgetFormData, BudgetPeriodType, BudgetRow, Category } from '@/types'
 
 export function useBudgets() {
   return useQuery({
@@ -32,9 +32,15 @@ export function useUpsertBudget() {
         const serialized = serializeBudget(data)
         await sheetsClient.budgets().createRow(serialized)
       } else {
-        await sheetsClient
-          .budgets()
-          .updateRow(rowIndex + 2, serializeBudgetUpdate({ amount: data.amount }))
+        // The sheets-db-api's updateRow endpoint is PUT-semantic: any column
+        // not included in the payload gets blanked. Merge the new amount into
+        // the existing row so category_id/period_type/period_key survive.
+        const merged: BudgetRow = {
+          ...rows[rowIndex],
+          amount: String(data.amount),
+          updated_at: new Date().toISOString(),
+        }
+        await sheetsClient.budgets().updateRow(rowIndex + 2, merged)
       }
     },
     onSuccess: () => {

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { sheetsClient } from '@/lib/sheets-client'
 import { queryKeys } from '@/lib/query-keys'
-import { parseCategoryRow, serializeCategory, serializeCategoryUpdate } from '@/lib/transformers'
+import { parseCategoryRow, serializeCategory } from '@/lib/transformers'
 import type { Category, CategoryFormData, CategoryRow, CategoryType } from '@/types'
 
 export function useCategories() {
@@ -42,6 +42,28 @@ export function useCreateCategory() {
   })
 }
 
+// The sheets-db-api's updateRow endpoint is PUT-semantic: fields not in the
+// payload get blanked. Always merge partial updates into the full existing row
+// before sending so columns like is_active, name, type, etc. are preserved.
+function mergeCategoryUpdate(
+  existing: CategoryRow,
+  patch: Partial<CategoryFormData>
+): CategoryRow {
+  const merged: CategoryRow = { ...existing }
+  if (patch.name !== undefined) merged.name = patch.name
+  if (patch.type !== undefined) merged.type = patch.type
+  if (patch.icon !== undefined) merged.icon = patch.icon
+  if (patch.color !== undefined) merged.color = patch.color
+  if (patch.budget_amount !== undefined) {
+    merged.budget_amount = patch.budget_amount !== null ? String(patch.budget_amount) : ''
+  }
+  if (patch.budget_cadence !== undefined) {
+    merged.budget_cadence = patch.budget_cadence ?? ''
+  }
+  merged.updated_at = new Date().toISOString()
+  return merged
+}
+
 export function useUpdateCategory() {
   const queryClient = useQueryClient()
 
@@ -59,8 +81,40 @@ export function useUpdateCategory() {
         throw new Error('Category not found')
       }
 
-      const updateData = serializeCategoryUpdate(data)
-      await sheetsClient.categories().updateRow(rowIndex + 2, updateData)
+      const merged = mergeCategoryUpdate(rows[rowIndex], data)
+      await sheetsClient.categories().updateRow(rowIndex + 2, merged)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories.all })
+    },
+  })
+}
+
+// Applies multiple category patches in a single sheets-db-api bulk call.
+// Fetches the existing rows once, merges each patch into its full row
+// (same PUT-safe logic as single-update), and issues one updateRowsBulk.
+// Avoids the N x (getRows + updateRow) fan-out that trips Google Sheets
+// read-quota limits when used for Seed Defaults etc.
+export function useBulkUpdateCategories() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (
+      patches: Array<{ id: string; data: Partial<CategoryFormData> }>
+    ) => {
+      if (patches.length === 0) return
+      const rows = await sheetsClient.categories().getRows()
+      const updates: Array<{ rowIndex: number; data: CategoryRow }> = []
+      for (const { id, data } of patches) {
+        const rowIndex = rows.findIndex((r) => r.id === id)
+        if (rowIndex === -1) continue
+        updates.push({
+          rowIndex: rowIndex + 2,
+          data: mergeCategoryUpdate(rows[rowIndex], data),
+        })
+      }
+      if (updates.length === 0) return
+      await sheetsClient.categories().updateRowsBulk(updates)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.categories.all })
@@ -79,10 +133,12 @@ export function useDeleteCategory() {
         throw new Error('Category not found')
       }
 
-      await sheetsClient.categories().updateRow(rowIndex + 2, {
+      const merged: CategoryRow = {
+        ...rows[rowIndex],
         is_active: 'false',
         updated_at: new Date().toISOString(),
-      } as Partial<CategoryRow>)
+      }
+      await sheetsClient.categories().updateRow(rowIndex + 2, merged)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.categories.all })

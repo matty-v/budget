@@ -21,7 +21,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { useCategories, useUpdateCategory } from '@/hooks/use-categories'
+import {
+  useBulkUpdateCategories,
+  useCategories,
+  useUpdateCategory,
+} from '@/hooks/use-categories'
 import { useTransactions } from '@/hooks/use-transactions'
 import {
   useBudgets,
@@ -56,6 +60,7 @@ export function BudgetsPage() {
   const { data: budgetsData } = useBudgets()
   const { data: transactionsData } = useTransactions()
   const updateCategory = useUpdateCategory()
+  const bulkUpdateCategories = useBulkUpdateCategories()
   const upsertBudget = useUpsertBudget()
   const deleteBudget = useDeleteBudget()
 
@@ -118,10 +123,11 @@ export function BudgetsPage() {
       targetMonths.push(`${y}-${String(m).padStart(2, '0')}`)
     }
 
-    return tabCategories
-      .filter((c) => !c.budget_amount)
+    // Propose for every expense category with spending history.
+    // Seed sets both cadence (to active tab) and amount — overwriting existing
+    // values so the user can fully re-seed.
+    return expenseCategories
       .map((category) => {
-        // Sum expense transactions per targeted month for this category
         const perMonthTotals = targetMonths.map((mKey) =>
           transactions
             .filter(
@@ -138,24 +144,34 @@ export function BudgetsPage() {
         return { category, proposed }
       })
       .filter((p) => p.proposed > 0)
-  }, [seedDialogOpen, tabCategories, transactions, activeTab])
+  }, [seedDialogOpen, expenseCategories, transactions, activeTab])
 
   const applySeeds = async () => {
-    for (const { category, proposed } of seedProposals) {
-      try {
-        await updateCategory.mutateAsync({
-          id: category.id,
-          data: { budget_amount: proposed },
-        })
-      } catch {
-        // toast handled below in catch-all
-      }
+    if (seedProposals.length === 0) {
+      setSeedDialogOpen(false)
+      return
     }
-    toast({
-      title: 'Defaults seeded',
-      description: `Set default for ${seedProposals.length} categories.`,
-      variant: 'success',
-    })
+    try {
+      await bulkUpdateCategories.mutateAsync(
+        seedProposals.map(({ category, proposed }) => ({
+          id: category.id,
+          data: { budget_amount: proposed, budget_cadence: activeTab },
+        }))
+      )
+      toast({
+        title: 'Seeded defaults',
+        description: `Applied ${activeTab} defaults to ${seedProposals.length} ${
+          seedProposals.length === 1 ? 'category' : 'categories'
+        }.`,
+        variant: 'success',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to seed defaults',
+        variant: 'destructive',
+      })
+    }
     setSeedDialogOpen(false)
   }
 
@@ -411,33 +427,54 @@ export function BudgetsPage() {
       <AlertDialog open={seedDialogOpen} onOpenChange={setSeedDialogOpen}>
         <AlertDialogContent className="max-h-[80vh] overflow-y-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle>Seed defaults from trailing 6-mo median</AlertDialogTitle>
+            <AlertDialogTitle>
+              Seed {activeTab} defaults from trailing 6-mo median
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Propose default {activeTab} budgets for categories that don&apos;t have one yet,
-              based on the median of the last 6 complete months of spending. One-off months
-              are de-weighted by using median instead of mean.
+              Sets both cadence and default amount for every expense category
+              with spending history, based on the median of the last 6 complete
+              months. Existing defaults and cadences will be{' '}
+              <span className="font-medium text-foreground">overwritten</span>.
+              One-off months are de-weighted by using the median instead of the mean.
+              Per-month / per-year overrides are not touched.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2 py-2">
             {seedProposals.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No categories need defaults — every {activeTab} category already has one set.
+                No spending history yet — nothing to seed from.
               </p>
             ) : (
-              seedProposals.map(({ category, proposed }) => (
-                <div key={category.id} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <span>{category.icon}</span>
-                    <span>{category.name}</span>
+              seedProposals.map(({ category, proposed }) => {
+                const currentCadenceMatches = category.budget_cadence === activeTab
+                const currentAmount = category.budget_amount
+                const willChange =
+                  !currentCadenceMatches || currentAmount !== proposed
+                return (
+                  <div
+                    key={category.id}
+                    className="flex items-center justify-between text-sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>{category.icon}</span>
+                      <span>{category.name}</span>
+                    </div>
+                    <div className="text-right text-xs">
+                      {willChange && currentAmount && currentCadenceMatches ? (
+                        <span className="text-muted-foreground line-through mr-2">
+                          {formatCurrency(currentAmount)}
+                        </span>
+                      ) : null}
+                      <span className="font-medium text-sm">
+                        {formatCurrency(proposed)}
+                      </span>
+                      <span className="text-muted-foreground text-xs">
+                        {activeTab === 'monthly' ? ' /mo' : ' /yr'}
+                      </span>
+                    </div>
                   </div>
-                  <span className="font-medium">
-                    {formatCurrency(proposed)}
-                    <span className="text-muted-foreground text-xs">
-                      {activeTab === 'monthly' ? ' /mo' : ' /yr'}
-                    </span>
-                  </span>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
           <AlertDialogFooter>
@@ -446,7 +483,9 @@ export function BudgetsPage() {
               onClick={applySeeds}
               disabled={seedProposals.length === 0}
             >
-              Apply {seedProposals.length > 0 ? `to ${seedProposals.length}` : ''}
+              {seedProposals.length === 0
+                ? 'Apply'
+                : `Apply to ${seedProposals.length}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

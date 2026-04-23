@@ -25,8 +25,11 @@ export function CategoryItem({ category, onEdit, onDelete }: CategoryItemProps) 
             <div className="font-medium truncate">{category.name}</div>
             <div className="text-xs text-muted-foreground capitalize">
               {category.type}
-              {category.budget_amount && (
-                <span> · Budget: {formatCurrency(category.budget_amount)}</span>
+              {category.budget_amount && category.budget_cadence && (
+                <span>
+                  {' '}· Budget: {formatCurrency(category.budget_amount)}
+                  {category.budget_cadence === 'monthly' ? ' /mo' : ' /yr'}
+                </span>
               )}
             </div>
           </div>

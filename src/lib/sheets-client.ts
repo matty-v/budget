@@ -174,6 +174,8 @@ class SheetsClient {
       updateRow: (rowIndex: number, data: Partial<CategoryRow>) =>
         this.updateRow(SHEET_NAMES.CATEGORIES, rowIndex, data as unknown as Record<string, string>),
       deleteRow: (rowIndex: number) => this.deleteRow(SHEET_NAMES.CATEGORIES, rowIndex),
+      updateRowsBulk: (updates: Array<{ rowIndex: number; data: Partial<CategoryRow> }>) =>
+        this.updateRowsBulk(SHEET_NAMES.CATEGORIES, updates as unknown as Array<{ rowIndex: number; data: Record<string, string> }>),
     }
   }
 

@@ -90,6 +90,38 @@ export function useUpdateCategory() {
   })
 }
 
+// Applies multiple category patches in a single sheets-db-api bulk call.
+// Fetches the existing rows once, merges each patch into its full row
+// (same PUT-safe logic as single-update), and issues one updateRowsBulk.
+// Avoids the N x (getRows + updateRow) fan-out that trips Google Sheets
+// read-quota limits when used for Seed Defaults etc.
+export function useBulkUpdateCategories() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (
+      patches: Array<{ id: string; data: Partial<CategoryFormData> }>
+    ) => {
+      if (patches.length === 0) return
+      const rows = await sheetsClient.categories().getRows()
+      const updates: Array<{ rowIndex: number; data: CategoryRow }> = []
+      for (const { id, data } of patches) {
+        const rowIndex = rows.findIndex((r) => r.id === id)
+        if (rowIndex === -1) continue
+        updates.push({
+          rowIndex: rowIndex + 2,
+          data: mergeCategoryUpdate(rows[rowIndex], data),
+        })
+      }
+      if (updates.length === 0) return
+      await sheetsClient.categories().updateRowsBulk(updates)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories.all })
+    },
+  })
+}
+
 export function useDeleteCategory() {
   const queryClient = useQueryClient()
 

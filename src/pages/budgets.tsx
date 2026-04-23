@@ -21,7 +21,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { useCategories, useUpdateCategory } from '@/hooks/use-categories'
+import {
+  useBulkUpdateCategories,
+  useCategories,
+  useUpdateCategory,
+} from '@/hooks/use-categories'
 import { useTransactions } from '@/hooks/use-transactions'
 import {
   useBudgets,
@@ -56,6 +60,7 @@ export function BudgetsPage() {
   const { data: budgetsData } = useBudgets()
   const { data: transactionsData } = useTransactions()
   const updateCategory = useUpdateCategory()
+  const bulkUpdateCategories = useBulkUpdateCategories()
   const upsertBudget = useUpsertBudget()
   const deleteBudget = useDeleteBudget()
 
@@ -142,23 +147,31 @@ export function BudgetsPage() {
   }, [seedDialogOpen, expenseCategories, transactions, activeTab])
 
   const applySeeds = async () => {
-    for (const { category, proposed } of seedProposals) {
-      try {
-        await updateCategory.mutateAsync({
+    if (seedProposals.length === 0) {
+      setSeedDialogOpen(false)
+      return
+    }
+    try {
+      await bulkUpdateCategories.mutateAsync(
+        seedProposals.map(({ category, proposed }) => ({
           id: category.id,
           data: { budget_amount: proposed, budget_cadence: activeTab },
-        })
-      } catch {
-        // per-category failure silently skipped; user will see it didn't move
-      }
+        }))
+      )
+      toast({
+        title: 'Seeded defaults',
+        description: `Applied ${activeTab} defaults to ${seedProposals.length} ${
+          seedProposals.length === 1 ? 'category' : 'categories'
+        }.`,
+        variant: 'success',
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to seed defaults',
+        variant: 'destructive',
+      })
     }
-    toast({
-      title: 'Seeded defaults',
-      description: `Applied ${activeTab} defaults to ${seedProposals.length} ${
-        seedProposals.length === 1 ? 'category' : 'categories'
-      }.`,
-      variant: 'success',
-    })
     setSeedDialogOpen(false)
   }
 

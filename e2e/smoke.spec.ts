@@ -30,6 +30,15 @@ test.describe('Smoke Tests', () => {
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
   })
 
+  test('budget page loads via navigation', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('link', { name: 'Budget' }).click()
+    await expect(page.getByRole('heading', { name: 'Budget' })).toBeVisible()
+    // Cadence tabs render
+    await expect(page.getByRole('button', { name: 'Monthly' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Annual' })).toBeVisible()
+  })
+
   test('navigation bar works', async ({ page }) => {
     await page.goto('/')
 
@@ -44,6 +53,10 @@ test.describe('Smoke Tests', () => {
     // Navigate to Categories
     await page.getByRole('link', { name: 'Categories' }).click()
     await expect(page.getByRole('heading', { name: 'Categories' })).toBeVisible()
+
+    // Navigate to Budget
+    await page.getByRole('link', { name: 'Budget' }).click()
+    await expect(page.getByRole('heading', { name: 'Budget' })).toBeVisible()
 
     // Navigate to Settings
     await page.getByRole('link', { name: 'Settings' }).click()

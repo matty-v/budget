@@ -9,8 +9,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent } from '@/components/ui/card'
-import { X } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import type { Account, Category } from '@/types'
+
+export type TransactionSortBy =
+  | 'date_desc'
+  | 'date_asc'
+  | 'amount_desc'
+  | 'amount_asc'
 
 export interface TransactionFilterValues {
   dateFrom: string
@@ -18,6 +24,8 @@ export interface TransactionFilterValues {
   accountId: string
   categoryId: string
   type: string
+  searchText: string
+  sortBy: TransactionSortBy
 }
 
 interface TransactionFiltersProps {
@@ -27,12 +35,16 @@ interface TransactionFiltersProps {
   categories: Category[]
 }
 
+const DEFAULT_SORT: TransactionSortBy = 'date_desc'
+
 const EMPTY_FILTERS: TransactionFilterValues = {
   dateFrom: '',
   dateTo: '',
   accountId: '',
   categoryId: '',
   type: '',
+  searchText: '',
+  sortBy: DEFAULT_SORT,
 }
 
 export function TransactionFilters({
@@ -41,9 +53,19 @@ export function TransactionFilters({
   accounts,
   categories,
 }: TransactionFiltersProps) {
-  const hasActiveFilters = Object.values(filters).some((v) => v !== '')
+  const hasActiveFilters =
+    filters.dateFrom !== '' ||
+    filters.dateTo !== '' ||
+    filters.accountId !== '' ||
+    filters.categoryId !== '' ||
+    filters.type !== '' ||
+    filters.searchText !== '' ||
+    filters.sortBy !== DEFAULT_SORT
 
-  const updateFilter = (key: keyof TransactionFilterValues, value: string) => {
+  const updateFilter = <K extends keyof TransactionFilterValues>(
+    key: K,
+    value: TransactionFilterValues[K]
+  ) => {
     onFiltersChange({ ...filters, [key]: value })
   }
 
@@ -53,7 +75,20 @@ export function TransactionFilters({
 
   return (
     <Card>
-      <CardContent className="pt-4">
+      <CardContent className="pt-4 space-y-3">
+        {/* Search row */}
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            id="searchText"
+            type="search"
+            value={filters.searchText}
+            onChange={(e) => updateFilter('searchText', e.target.value)}
+            placeholder="Search description, notes, category..."
+            className="pl-8 h-9"
+          />
+        </div>
+
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {/* Date From */}
           <div className="space-y-1">
@@ -140,6 +175,25 @@ export function TransactionFilters({
                 <SelectItem value="income">Income</SelectItem>
                 <SelectItem value="expense">Expense</SelectItem>
                 <SelectItem value="transfer">Transfer</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Sort */}
+          <div className="space-y-1">
+            <Label className="text-xs">Sort</Label>
+            <Select
+              value={filters.sortBy}
+              onValueChange={(value) => updateFilter('sortBy', value as TransactionSortBy)}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date_desc">Date (newest)</SelectItem>
+                <SelectItem value="date_asc">Date (oldest)</SelectItem>
+                <SelectItem value="amount_desc">Amount (high to low)</SelectItem>
+                <SelectItem value="amount_asc">Amount (low to high)</SelectItem>
               </SelectContent>
             </Select>
           </div>

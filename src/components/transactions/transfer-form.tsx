@@ -2,6 +2,13 @@ import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useTransactions } from '@/hooks/use-transactions'
 import { toISODateString } from '@/lib/utils'
 import type { TransferFormData } from '@/types'
@@ -73,32 +80,37 @@ export function TransferForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="from-account">From Account</Label>
-        <Input
-          id="from-account"
-          list="transfer-account-options"
-          value={fromAccount}
-          onChange={(e) => setFromAccount(e.target.value)}
-          placeholder="Source account"
-          required
-        />
+        <Label>From Account</Label>
+        <Select value={fromAccount} onValueChange={setFromAccount} required>
+          <SelectTrigger>
+            <SelectValue placeholder="Select source account" />
+          </SelectTrigger>
+          <SelectContent>
+            {accountSuggestions.map((name) => (
+              <SelectItem key={name} value={name}>
+                {name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="to-account">To Account</Label>
-        <Input
-          id="to-account"
-          list="transfer-account-options"
-          value={toAccount}
-          onChange={(e) => setToAccount(e.target.value)}
-          placeholder="Destination account"
-          required
-        />
-        <datalist id="transfer-account-options">
-          {accountSuggestions.map((name) => (
-            <option key={name} value={name} />
-          ))}
-        </datalist>
+        <Label>To Account</Label>
+        <Select value={toAccount} onValueChange={setToAccount} required>
+          <SelectTrigger>
+            <SelectValue placeholder="Select destination account" />
+          </SelectTrigger>
+          <SelectContent>
+            {accountSuggestions
+              .filter((name) => name !== fromAccount)
+              .map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">

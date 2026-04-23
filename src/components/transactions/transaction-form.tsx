@@ -165,19 +165,18 @@ export function TransactionForm({
 
         <div className="space-y-2">
           <Label htmlFor="account">Account</Label>
-          <Input
-            id="account"
-            list="txn-form-account-options"
-            value={sourceAccount}
-            onChange={(e) => setSourceAccount(e.target.value)}
-            placeholder="e.g., USAA Checking"
-            required
-          />
-          <datalist id="txn-form-account-options">
-            {accountSuggestions.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
+          <Select value={sourceAccount} onValueChange={setSourceAccount} required>
+            <SelectTrigger>
+              <SelectValue placeholder="Select account" />
+            </SelectTrigger>
+            <SelectContent>
+              {accountSuggestions.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

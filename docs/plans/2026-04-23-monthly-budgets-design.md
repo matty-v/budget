@@ -1,8 +1,20 @@
-# Monthly Budgets — Design
+# Monthly & Annual Budgets — Design
 
 **Date:** 2026-04-23
-**Status:** Draft — awaiting decisions on Open Questions
+**Status:** Approved (pending one clarification on Q1 — see Resolutions)
 **Author:** R2-D2
+
+## Resolutions (from Matt, 2026-04-23)
+
+| # | Decision | Resolution |
+|---|----------|-----------|
+| Q1 | Flat vs per-month | **Support BOTH monthly and annual cadences** per category. Interpretation used below: each category picks *one* cadence (monthly or annual); amounts are resolved against whichever is set. Flagged for confirmation. |
+| Q2 | New page vs tab | **New page** at `/budget`. |
+| Q3 | No-budget dashboard behavior | **Hide** categories without a budget. |
+| Q4 | Pace indicator | **Both** — headline "$SPENT / $BUDGET · on pace: $PROJECTED" + progress bar. |
+| Q5 | Income/transfer categories | **Expense only** for MVP. |
+| Q6 | Seed window | **6-mo trailing median**, one-offs excluded. |
+| Q7 | Phasing | **Single PR** bundling everything. |
 
 ## Overview
 
@@ -70,32 +82,80 @@ Each row below lists the choice, the alternative, and the reason. Any row marked
 
 ## Architecture
 
-### Schema — new `Budgets` sheet
+### Schema — `Categories` tab additions
+
+Add one new column:
+
+| Column | Type | Notes |
+|--------|------|-------|
+| budget_cadence | string | `'monthly'`, `'annual'`, or empty. Empty = no budget for this category. |
+
+`budget_amount` stays as-is; its interpretation depends on `budget_cadence`:
+- `monthly` → `budget_amount` is the default per-month target.
+- `annual` → `budget_amount` is the default per-year target.
+- empty → category has no budget and is omitted from all budget views.
+
+### Schema — new `Budgets` sheet (for per-period overrides)
 
 | Column | Type | Notes |
 |--------|------|-------|
 | id | string (UUID) | |
 | category_id | string | FK to Categories |
-| year_month | string | `YYYY-MM` format, e.g. `2026-04` |
+| period_type | string | `'monthly'` or `'annual'`. Must match that category's current cadence. |
+| period_key | string | For monthly: `YYYY-MM`. For annual: `YYYY`. |
 | amount | number | Positive. No sign convention needed. |
 | created_at | string | ISO timestamp |
 | updated_at | string | ISO timestamp |
 
-**Uniqueness:** `(category_id, year_month)` should be unique. Enforced by app logic; the sheets-db-api doesn't enforce constraints. `useUpsertBudget` looks up existing row before inserting.
+**Uniqueness:** `(category_id, period_type, period_key)` should be unique. Enforced by app logic (upsert looks up existing row before inserting). The sheets-db-api doesn't enforce constraints.
 
-**Resolution for "what is the budget for category C in month M?"**
-1. Look for a `Budgets` row where `category_id = C` and `year_month = M`. If found, use `amount`.
+**Resolution — "what is the budget for category C covering month M of year Y?"**
+
+For a **monthly-cadence** category C:
+1. Look for a `Budgets` row where `category_id=C, period_type='monthly', period_key=Y-M`. If found → that's the budget for month M.
 2. Else fall back to `Categories.budget_amount` for C.
-3. Else no budget → category isn't counted in budget rollups.
+3. Else category has no budget → hidden from dashboard.
+
+For an **annual-cadence** category C covering month M of year Y:
+1. Look for a `Budgets` row where `category_id=C, period_type='annual', period_key=Y`. If found → that's the annual budget for year Y.
+2. Else fall back to `Categories.budget_amount` for C.
+3. Else hidden.
+4. Dashboard renders as `YTD spent / annual budget`, and the pace line compares YTD spend to `(fraction of year elapsed) × annual budget`.
 
 ### Code changes
 
+**Updated types** (`src/types/category.ts`):
+```typescript
+export type BudgetCadence = 'monthly' | 'annual'
+
+export interface Category {
+  // ...existing fields
+  budget_amount: number | null
+  budget_cadence: BudgetCadence | null
+}
+
+export interface CategoryFormData {
+  // ...existing fields
+  budget_amount: number | null
+  budget_cadence: BudgetCadence | null
+}
+
+export interface CategoryRow {
+  // ...existing fields
+  budget_amount: string | number
+  budget_cadence: string
+}
+```
+
 **New types** (`src/types/budget.ts`):
 ```typescript
+export type BudgetPeriodType = 'monthly' | 'annual'
+
 export interface Budget {
   id: string
   category_id: string
-  year_month: string  // YYYY-MM
+  period_type: BudgetPeriodType
+  period_key: string  // YYYY-MM for monthly, YYYY for annual
   amount: number
   created_at: string
   updated_at: string
@@ -103,14 +163,16 @@ export interface Budget {
 
 export interface BudgetFormData {
   category_id: string
-  year_month: string
+  period_type: BudgetPeriodType
+  period_key: string
   amount: number
 }
 
 export interface BudgetRow {
   id: string
   category_id: string
-  year_month: string
+  period_type: string
+  period_key: string
   amount: string | number
   created_at: string
   updated_at: string
@@ -144,12 +206,12 @@ export interface BudgetRow {
 
 **New Budgets page** (`src/pages/budgets.tsx`):
 - Nav link added to `nav-bar.tsx`.
-- Grid: rows = expense categories, columns = `["Default", "Jan", "Feb", ..., currentMonth]`. Each cell is an input.
-- "Default" column edits `Category.budget_amount`.
-- Each monthly cell edits/creates/deletes a `Budgets` row.
-- Empty cell = inherit from Default.
-- Header action: "Seed defaults from trailing 6-mo average" button (computes per-category average from Transactions, writes to `Category.budget_amount`, only for categories currently at null).
-- Header action: "Copy [Month] to [Month]" for quickly duplicating a month's budgets.
+- Two tabs at the top: **Monthly** / **Annual** (or a single toggle). Each tab lists only categories whose `budget_cadence` matches.
+- Categories with `budget_cadence = null` appear in an "Unbudgeted" section below both tabs, each with a cadence picker ("Make monthly" / "Make annual") that sets `budget_cadence` and reveals the amount input.
+- Grid (Monthly tab): rows = monthly-cadence expense categories, columns = `["Default", <month columns from earliest transaction month up to current>]`. "Default" edits `Category.budget_amount`; monthly cells upsert/delete a `Budgets` row (`period_type='monthly'`). Empty cell = inherit from Default.
+- Grid (Annual tab): rows = annual-cadence expense categories, columns = `["Default", <year columns>]`. "Default" edits `Category.budget_amount` (interpreted as annual); year cells upsert/delete `Budgets` rows (`period_type='annual'`).
+- Header action: "Seed defaults from trailing 6-mo median" button. Proposes a per-category default based on trailing 6-month *median* monthly spend; for categories currently set to annual cadence, the proposed default is `12 × median monthly spend`. User reviews before applying — doesn't overwrite existing budgets silently.
+- Header action: "Copy [Period] to [Period]" for duplicating a column.
 
 ### Routing
 
@@ -159,28 +221,22 @@ New route `/budget` → `BudgetsPage`. Add to `App.tsx` router config.
 
 Users with an existing spreadsheet need the `Budgets` sheet added. The existing `useSheetsInit` flow appears to handle "missing sheets" diffing — verify and ensure `Budgets` gets created on next init. (Need to read `use-sheets-init.ts` to confirm.)
 
-## Phasing
+## Scope for this PR
 
-Because the flat-budget plumbing exists, we can ship value fast:
+Single PR (per Matt's Q7 answer) covering:
 
-**Phase 1 — flat budgets only, dashboard polish.** No schema change.
-- Add Budgets page for bulk editing `Category.budget_amount` across all categories at once.
-- Add "Seed from trailing 6-mo average" button.
-- Rewrite BudgetOverview to add totals + pace indicator.
-- Ship. Matt can set realistic budgets in under 5 minutes and use them immediately.
+1. **Schema migration** — add `budget_cadence` column to Categories; add new `Budgets` sheet.
+2. **Types + transformers + hooks** — `Category.budget_cadence`, `Budget` type, `useBudgets`, `useUpsertBudget`, `useDeleteBudget`, `resolveBudget` helper.
+3. **Category form** — cadence picker (Monthly / Annual / No budget) next to the amount.
+4. **Budgets page** — new route + nav link; tabs for Monthly / Annual; per-period grid; seed-from-median button; copy-period button.
+5. **Dashboard rewrite** — BudgetOverview shows headline totals + pace, handles both monthly and annual cadences, respects resolved-with-fallback per category. Month picker for retrospection.
+6. **E2E tests** covering the happy paths.
 
-**Phase 2 — per-month overrides.** Schema change.
-- Add `Budgets` sheet + hooks + transformers + upsert.
-- Extend Budgets page to grid view with monthly columns.
-- Dashboard month-picker for retrospective views.
-- Resolve-with-fallback logic.
-
-**Phase 3 — optional future.**
-- Income "goals" (income-type categories get a target amount).
-- Alerts / over-budget indicators.
-- Copy-month / per-quarter templates.
-
-**Recommendation: ship Phases 1 and 2 in sequence in this feature.** Phase 3 is out of scope for this work.
+**Out of scope** (future feature asks, not this PR):
+- Income "goals" — income categories intentionally excluded from budget flows here.
+- Alerts / notifications.
+- Rollover / envelope budgeting.
+- Budget integration into the R2-generated analytics tabs (YoY / Cashflow / etc.) — those are off-app analyses and a separate concern.
 
 ## Testing
 
@@ -195,50 +251,27 @@ Because the flat-budget plumbing exists, we can ship value fast:
 - **No constraint enforcement.** Sheet-layer `(category_id, year_month)` uniqueness is enforced only by the client. A bug or manual sheet edit could create duplicates. Upsert should `SELECT`-then-update; if two rows exist, prefer the most-recently-updated and log a warning.
 - **Analytics tabs** (By Category × Month, YoY, Cashflow, Leaks) don't know about budgets. Out of scope for this feature — they were generated by R2's off-app analysis, not the app itself. Separate concern.
 
-## Open Questions
+## Clarification Needed on Q1
 
-**Q1: Do you want per-month budget variation, or is one flat amount per category enough?**
-- If flat is enough → we only do Phase 1. Much smaller diff, ships tomorrow.
-- If per-month → we do Phases 1 + 2. The answer depends on whether your spending is actually seasonal enough to warrant it.
-- **My recommendation:** go per-month. You have travel, holidays, kids-related seasonal stuff. A flat number will be wrong often enough that you'll stop trusting it.
+Matt's answer — "Let's support both monthly and annual amounts" — has two plausible readings. This spec uses reading (a). Flagging for confirmation before coding.
 
-**Q2: Should the Budgets page be a new page in the nav, or a tab inside the existing Categories page?**
-- New page keeps Categories focused on the taxonomy itself; Budgets is its own concept.
-- **Recommendation:** new page at `/budget`.
+- **(a) One cadence per category (chosen here).** Each category picks *either* monthly *or* annual. Dining is monthly, Travel is annual. This is what the architecture above assumes. Simple UX, straightforward resolution rules.
+- **(b) Both at once per category.** A single category can have a monthly budget ($200/mo Dining) *and* an annual cap ($2,400/yr Dining). Dashboard would show both indicators. More flexible but introduces conflict cases (what if monthly × 12 > annual?) and doubles the UX surface area.
 
-**Q3: When no budget is set for a category in a month, what should the dashboard show?**
-- (a) Don't list the category at all.
-- (b) List it with "no budget" and show spend.
-- **Recommendation:** (a) — keeps the dashboard clean. Categories with no budget appear in "Spending by Category" chart already.
-
-**Q4: Pace indicator — day-of-month-prorated or full-month target?**
-- Prorated: "on pace to spend $X." Useful day-to-day.
-- Full-month: "spent $X of $Y." Simpler.
-- **Recommendation:** show both. Headline = "$SPENT / $BUDGET · on pace: $PROJECTED." Progress bar stays raw.
-
-**Q5: Transfer and income categories on the Budgets page?**
-- Filter to expense only?
-- Include income with an optional "earnings goal"?
-- **Recommendation:** MVP = expense only (simplest). Income goals is a Phase 3 ask.
-
-**Q6: Seed-from-trailing-average default window?**
-- Last 3 months (responsive to recent life changes)?
-- Last 6 months (less noise)?
-- Last 12 months (captures seasonality)?
-- **Recommendation:** 6 months, with a settings toggle. Land-loan-payoff and car-down-payment type one-offs should be excluded — use median or a trimmed mean, not raw average.
-
-**Q7: Priority — do Phase 1 first and pause for feedback, or bundle 1+2 into a single PR?**
-- **Recommendation:** two PRs, Phase 1 first. You can feel whether flat budgets are enough before we commit to the schema change.
+**Recommendation: (a).** It covers the realistic use cases (Travel/Gifts/Charity → annual; Groceries/Utilities/Dining → monthly) without compounding complexity. If you meant (b), flag before we start coding — it's a ~1.5× design.
 
 ## Estimated Work
 
-- **Phase 1:** ~1 working session. Budgets page with flat-amount editing, seed-from-avg button, dashboard polish (totals + pace). No schema change.
-- **Phase 2:** ~1 working session. New `Budgets` sheet + hooks, grid expansion on Budgets page, month picker on dashboard, resolve-with-fallback.
-- **E2E:** 2-3 new Playwright tests per phase.
+~2 working sessions total:
+- Schema + types + hooks: 30 min.
+- Category form cadence picker: 20 min.
+- Budgets page (grid, seed, copy): 90 min.
+- Dashboard rewrite (totals, pace, month picker, annual handling): 90 min.
+- E2E tests: 45 min.
+- Polish, lint, build: 20 min.
 
 ## Next Steps
 
-1. Matt answers Open Questions Q1–Q7.
-2. R2 revises this doc if answers change design.
-3. R2 opens feature branch `feat/monthly-budgets` and writes implementation doc (`2026-04-23-monthly-budgets-implementation.md`) before coding.
-4. Ship Phase 1. Pause. Ship Phase 2.
+1. Matt confirms interpretation of Q1 (reading a vs b).
+2. R2 writes the implementation doc (`2026-04-23-monthly-budgets-implementation.md`) — step-by-step file-level plan.
+3. Ship.

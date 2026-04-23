@@ -106,7 +106,25 @@ export function BudgetOverview({
     return { spent, budget, projected }
   }, [rows])
 
-  if (rows.length === 0) {
+  // Month-level cashflow: income vs all expenses (not just budgeted ones)
+  // for the selected month. Transfers are excluded so there's no
+  // double-counting. Net = income - expenses.
+  const monthCashflow = useMemo(() => {
+    const prefix = yearMonth
+    let income = 0
+    let expenses = 0
+    for (const t of transactions) {
+      if (!t.date.startsWith(prefix)) continue
+      if (t.type === 'income') income += t.amount
+      else if (t.type === 'expense') expenses += Math.abs(t.amount)
+    }
+    return { income, expenses, net: income - expenses }
+  }, [transactions, yearMonth])
+
+  const hasAnyActivity =
+    monthCashflow.income !== 0 || monthCashflow.expenses !== 0 || rows.length > 0
+
+  if (!hasAnyActivity) {
     return (
       <Card>
         <CardHeader>
@@ -114,7 +132,7 @@ export function BudgetOverview({
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground text-center py-4">
-            No budgets set. Visit the Budget page to set monthly or annual budgets for categories.
+            No budgets or transactions in this period yet. Visit the Budget page to set monthly or annual budgets.
           </p>
         </CardContent>
       </Card>
@@ -127,6 +145,37 @@ export function BudgetOverview({
         <CardTitle className="text-base">Budget Overview</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Monthly cashflow — income, expenses, net */}
+        <div className="grid grid-cols-3 gap-2 pb-3 border-b">
+          <div>
+            <div className="text-xs text-muted-foreground">Income</div>
+            <div className="text-base font-semibold text-green-600">
+              {formatCurrency(monthCashflow.income)}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">Expenses</div>
+            <div className="text-base font-semibold text-red-600">
+              {formatCurrency(monthCashflow.expenses)}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">Net</div>
+            <div
+              className={`text-base font-semibold ${
+                monthCashflow.net > 0
+                  ? 'text-green-600'
+                  : monthCashflow.net < 0
+                    ? 'text-red-600'
+                    : 'text-muted-foreground'
+              }`}
+            >
+              {monthCashflow.net >= 0 ? '+' : ''}
+              {formatCurrency(monthCashflow.net)}
+            </div>
+          </div>
+        </div>
+
         {totals && (
           <div className="space-y-2 pb-3 border-b">
             <div className="flex items-baseline justify-between">

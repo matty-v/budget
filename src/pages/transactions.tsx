@@ -28,29 +28,51 @@ export function TransactionsPage() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>()
   const [filters, setFilters] = useState<TransactionFilterValues>(EMPTY_FILTERS)
 
-  // Filter transactions based on current filter values
+  // Filter + sort transactions based on current filter values
   const filteredTransactions = useMemo(() => {
     if (!transactions) return []
 
-    return transactions.filter((t) => {
-      // Date from filter
+    const needle = filters.searchText.trim().toLowerCase()
+    const categoryById = new Map((categories ?? []).map((c) => [c.id, c]))
+
+    const result = transactions.filter((t) => {
       if (filters.dateFrom && t.date < filters.dateFrom) return false
-
-      // Date to filter
       if (filters.dateTo && t.date > filters.dateTo) return false
-
-      // Account filter
       if (filters.accountId && t.source_account_id !== filters.accountId) return false
-
-      // Category filter
       if (filters.categoryId && t.category_id !== filters.categoryId) return false
-
-      // Type filter
       if (filters.type && t.type !== filters.type) return false
+
+      if (needle) {
+        const cat = t.category_id ? categoryById.get(t.category_id) : undefined
+        const haystack = [
+          t.description,
+          t.notes,
+          cat?.name,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+        if (!haystack.includes(needle)) return false
+      }
 
       return true
     })
-  }, [transactions, filters])
+
+    const cmp = (a: Transaction, b: Transaction) => {
+      switch (filters.sortBy) {
+        case 'date_asc':
+          return a.date.localeCompare(b.date)
+        case 'amount_desc':
+          return Math.abs(b.amount) - Math.abs(a.amount)
+        case 'amount_asc':
+          return Math.abs(a.amount) - Math.abs(b.amount)
+        case 'date_desc':
+        default:
+          return b.date.localeCompare(a.date)
+      }
+    }
+    return result.slice().sort(cmp)
+  }, [transactions, categories, filters])
 
   const handleEdit = (transaction: Transaction) => {
     setEditingTransaction(transaction)
@@ -140,6 +162,7 @@ export function TransactionsPage() {
           accounts={accounts ?? []}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          groupByDate={filters.sortBy === 'date_desc' || filters.sortBy === 'date_asc'}
         />
       )}
 

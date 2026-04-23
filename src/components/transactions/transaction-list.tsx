@@ -38,6 +38,11 @@ interface TransactionListProps {
   accounts: Account[]
   onEdit?: (transaction: Transaction) => void
   onDelete?: (transaction: Transaction) => void
+  // When true (default), transactions are rendered in date-grouped sections
+  // with their incoming order preserved within each date. When false, the list
+  // renders flat in the exact order passed in — used when the caller is
+  // sorting by amount etc. where the date grouping would hide the sort.
+  groupByDate?: boolean
 }
 
 export function TransactionList({
@@ -46,6 +51,7 @@ export function TransactionList({
   accounts,
   onEdit,
   onDelete,
+  groupByDate = true,
 }: TransactionListProps) {
   const { toast } = useToast()
   const { mutate: categorizeTransactions, isPending: isCategorizing } = useCategorizeTransactions()
@@ -100,20 +106,19 @@ export function TransactionList({
     )
   }
 
-  // Group transactions by date
-  const grouped = transactions.reduce(
-    (acc, transaction) => {
-      const date = transaction.date
-      if (!acc[date]) {
-        acc[date] = []
-      }
-      acc[date].push(transaction)
-      return acc
-    },
-    {} as Record<string, Transaction[]>
-  )
-
-  const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a))
+  // Group transactions by date. Preserve the order the dates appear in the
+  // incoming list so the caller's sort direction (date asc vs desc) is
+  // respected — we used to hard-code desc here, which broke ascending sorts.
+  const grouped: Record<string, Transaction[]> = {}
+  const sortedDates: string[] = []
+  for (const transaction of transactions) {
+    const date = transaction.date
+    if (!grouped[date]) {
+      grouped[date] = []
+      sortedDates.push(date)
+    }
+    grouped[date].push(transaction)
+  }
 
   return (
     <div className="space-y-6">
@@ -140,25 +145,40 @@ export function TransactionList({
           </Button>
         </div>
       )}
-      {sortedDates.map((date) => (
-        <div key={date}>
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">
-            {formatDateHeader(date)}
-          </h3>
-          <div className="space-y-2">
-            {grouped[date].map((transaction) => (
-              <TransactionItem
-                key={transaction.id}
-                transaction={transaction}
-                category={categories.find((c) => c.id === transaction.category_id)}
-                account={accounts.find((a) => a.id === transaction.source_account_id)}
-                onEdit={onEdit}
-                onDelete={onDelete}
-              />
-            ))}
+      {groupByDate ? (
+        sortedDates.map((date) => (
+          <div key={date}>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">
+              {formatDateHeader(date)}
+            </h3>
+            <div className="space-y-2">
+              {grouped[date].map((transaction) => (
+                <TransactionItem
+                  key={transaction.id}
+                  transaction={transaction}
+                  category={categories.find((c) => c.id === transaction.category_id)}
+                  account={accounts.find((a) => a.id === transaction.source_account_id)}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                />
+              ))}
+            </div>
           </div>
+        ))
+      ) : (
+        <div className="space-y-2">
+          {transactions.map((transaction) => (
+            <TransactionItem
+              key={transaction.id}
+              transaction={transaction}
+              category={categories.find((c) => c.id === transaction.category_id)}
+              account={accounts.find((a) => a.id === transaction.source_account_id)}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          ))}
         </div>
-      ))}
+      )}
     </div>
   )
 }

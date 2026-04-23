@@ -118,22 +118,25 @@ export function TransactionFilters({
             />
           </div>
 
-          {/* Account (free-text with datalist of existing values) */}
+          {/* Account */}
           <div className="space-y-1">
-            <Label htmlFor="sourceAccount" className="text-xs">Account</Label>
-            <Input
-              id="sourceAccount"
-              list="account-options"
+            <Label className="text-xs">Account</Label>
+            <Select
               value={filters.sourceAccount}
-              onChange={(e) => updateFilter('sourceAccount', e.target.value)}
-              placeholder="All accounts"
-              className="h-9"
-            />
-            <datalist id="account-options">
-              {accountOptions.map((name) => (
-                <option key={name} value={name} />
-              ))}
-            </datalist>
+              onValueChange={(value) => updateFilter('sourceAccount', value === 'all' ? '' : value)}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="All accounts" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All accounts</SelectItem>
+                {accountOptions.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Category */}

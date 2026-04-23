@@ -12,6 +12,9 @@ export const queryKeys = {
     filtered: (filters: Record<string, unknown>) => ['transactions', filters] as const,
     byAccount: (accountId: string) => ['transactions', 'account', accountId] as const,
   },
+  budgets: {
+    all: ['budgets'] as const,
+  },
   sheets: {
     status: ['sheets', 'status'] as const,
   },

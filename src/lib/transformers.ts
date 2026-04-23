@@ -3,6 +3,11 @@ import type {
   Account,
   AccountRow,
   AccountFormData,
+  Budget,
+  BudgetCadence,
+  BudgetFormData,
+  BudgetPeriodType,
+  BudgetRow,
   Category,
   CategoryRow,
   CategoryFormData,
@@ -66,6 +71,11 @@ export function serializeAccountUpdate(data: Partial<AccountFormData>): Partial<
 }
 
 // Category transformers
+function parseCadence(value: string | undefined | null): BudgetCadence | null {
+  if (value === 'monthly' || value === 'annual') return value
+  return null
+}
+
 export function parseCategoryRow(row: CategoryRow): Category {
   const budgetAmount = parseNumber(row.budget_amount)
   return {
@@ -75,6 +85,7 @@ export function parseCategoryRow(row: CategoryRow): Category {
     icon: row.icon,
     color: row.color,
     budget_amount: budgetAmount > 0 ? budgetAmount : null,
+    budget_cadence: parseCadence(row.budget_cadence),
     is_active: parseBoolean(row.is_active),
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -90,6 +101,7 @@ export function serializeCategory(data: CategoryFormData): CategoryRow {
     icon: data.icon,
     color: data.color,
     budget_amount: data.budget_amount !== null ? String(data.budget_amount) : '',
+    budget_cadence: data.budget_cadence ?? '',
     is_active: 'true',
     created_at: now,
     updated_at: now,
@@ -107,6 +119,51 @@ export function serializeCategoryUpdate(data: Partial<CategoryFormData>): Partia
   if (data.budget_amount !== undefined) {
     row.budget_amount = data.budget_amount !== null ? String(data.budget_amount) : ''
   }
+  if (data.budget_cadence !== undefined) {
+    row.budget_cadence = data.budget_cadence ?? ''
+  }
+  return row
+}
+
+// Budget transformers
+function parsePeriodType(value: string | undefined | null): BudgetPeriodType {
+  if (value === 'annual') return 'annual'
+  return 'monthly'
+}
+
+export function parseBudgetRow(row: BudgetRow): Budget {
+  return {
+    id: row.id,
+    category_id: row.category_id,
+    period_type: parsePeriodType(row.period_type),
+    period_key: row.period_key,
+    amount: parseNumber(row.amount),
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  }
+}
+
+export function serializeBudget(data: BudgetFormData): BudgetRow {
+  const now = new Date().toISOString()
+  return {
+    id: generateId(),
+    category_id: data.category_id,
+    period_type: data.period_type,
+    period_key: data.period_key,
+    amount: String(data.amount),
+    created_at: now,
+    updated_at: now,
+  }
+}
+
+export function serializeBudgetUpdate(data: Partial<BudgetFormData>): Partial<BudgetRow> {
+  const row: Partial<BudgetRow> = {
+    updated_at: new Date().toISOString(),
+  }
+  if (data.category_id !== undefined) row.category_id = data.category_id
+  if (data.period_type !== undefined) row.period_type = data.period_type
+  if (data.period_key !== undefined) row.period_key = data.period_key
+  if (data.amount !== undefined) row.amount = String(data.amount)
   return row
 }
 

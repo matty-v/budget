@@ -1,15 +1,8 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { useAccounts } from '@/hooks/use-accounts'
+import { useTransactions } from '@/hooks/use-transactions'
 import { toISODateString } from '@/lib/utils'
 import type { TransferFormData } from '@/types'
 
@@ -24,13 +17,21 @@ export function TransferForm({
   onCancel,
   isLoading,
 }: TransferFormProps) {
-  const { data: accounts } = useAccounts()
+  const { data: existingTransactions } = useTransactions()
+
+  const accountSuggestions = useMemo(() => {
+    const set = new Set<string>()
+    for (const t of existingTransactions ?? []) {
+      if (t.source_account) set.add(t.source_account)
+    }
+    return Array.from(set).sort()
+  }, [existingTransactions])
 
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(toISODateString(new Date()))
-  const [fromAccountId, setFromAccountId] = useState('')
-  const [toAccountId, setToAccountId] = useState('')
+  const [fromAccount, setFromAccount] = useState('')
+  const [toAccount, setToAccount] = useState('')
   const [notes, setNotes] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -39,18 +40,20 @@ export function TransferForm({
       description: description.trim() || 'Transfer',
       amount: parseFloat(amount) || 0,
       date,
-      from_account_id: fromAccountId,
-      to_account_id: toAccountId,
+      from_account: fromAccount.trim(),
+      to_account: toAccount.trim(),
       notes: notes.trim(),
     })
   }
 
+  const fromTrim = fromAccount.trim()
+  const toTrim = toAccount.trim()
   const isValid =
     amount &&
     parseFloat(amount) > 0 &&
-    fromAccountId &&
-    toAccountId &&
-    fromAccountId !== toAccountId
+    fromTrim &&
+    toTrim &&
+    fromTrim.toLowerCase() !== toTrim.toLowerCase()
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -71,36 +74,31 @@ export function TransferForm({
 
       <div className="space-y-2">
         <Label htmlFor="from-account">From Account</Label>
-        <Select value={fromAccountId} onValueChange={setFromAccountId} required>
-          <SelectTrigger>
-            <SelectValue placeholder="Select source account" />
-          </SelectTrigger>
-          <SelectContent>
-            {accounts?.map((account) => (
-              <SelectItem key={account.id} value={account.id}>
-                {account.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Input
+          id="from-account"
+          list="transfer-account-options"
+          value={fromAccount}
+          onChange={(e) => setFromAccount(e.target.value)}
+          placeholder="Source account"
+          required
+        />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="to-account">To Account</Label>
-        <Select value={toAccountId} onValueChange={setToAccountId} required>
-          <SelectTrigger>
-            <SelectValue placeholder="Select destination account" />
-          </SelectTrigger>
-          <SelectContent>
-            {accounts
-              ?.filter((a) => a.id !== fromAccountId)
-              .map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.name}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
+        <Input
+          id="to-account"
+          list="transfer-account-options"
+          value={toAccount}
+          onChange={(e) => setToAccount(e.target.value)}
+          placeholder="Destination account"
+          required
+        />
+        <datalist id="transfer-account-options">
+          {accountSuggestions.map((name) => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
       </div>
 
       <div className="space-y-2">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,8 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useAccounts } from '@/hooks/use-accounts'
 import { useCategories } from '@/hooks/use-categories'
+import { useTransactions } from '@/hooks/use-transactions'
 import { toISODateString } from '@/lib/utils'
 import type { Transaction, TransactionFormData, TransactionType } from '@/types'
 
@@ -27,8 +27,16 @@ export function TransactionForm({
   isLoading,
   transaction,
 }: TransactionFormProps) {
-  const { data: accounts } = useAccounts()
   const { data: categories } = useCategories()
+  const { data: existingTransactions } = useTransactions()
+
+  const accountSuggestions = useMemo(() => {
+    const set = new Set<string>()
+    for (const t of existingTransactions ?? []) {
+      if (t.source_account) set.add(t.source_account)
+    }
+    return Array.from(set).sort()
+  }, [existingTransactions])
 
   const isEditing = !!transaction
 
@@ -40,7 +48,7 @@ export function TransactionForm({
     transaction ? String(Math.abs(transaction.amount)) : ''
   )
   const [date, setDate] = useState(transaction?.date ?? toISODateString(new Date()))
-  const [accountId, setAccountId] = useState(transaction?.source_account_id ?? '')
+  const [sourceAccount, setSourceAccount] = useState(transaction?.source_account ?? '')
   const [categoryId, setCategoryId] = useState(transaction?.category_id ?? '')
   const [notes, setNotes] = useState(transaction?.notes ?? '')
 
@@ -50,19 +58,17 @@ export function TransactionForm({
       setType(transaction.type === 'transfer' ? 'expense' : transaction.type)
       setDescription(transaction.description)
       setAmount(String(Math.abs(transaction.amount)))
-      // Extract YYYY-MM-DD from date string (handles both ISO timestamps and YYYY-MM-DD formats)
       const dateOnly = transaction.date.split('T')[0]
       setDate(dateOnly)
-      setAccountId(transaction.source_account_id)
+      setSourceAccount(transaction.source_account)
       setCategoryId(transaction.category_id ?? '')
       setNotes(transaction.notes ?? '')
     } else {
-      // Reset to defaults for new transaction
       setType('expense')
       setDescription('')
       setAmount('')
       setDate(toISODateString(new Date()))
-      setAccountId('')
+      setSourceAccount('')
       setCategoryId('')
       setNotes('')
     }
@@ -77,7 +83,7 @@ export function TransactionForm({
       description: description.trim(),
       amount: parseFloat(amount) || 0,
       date,
-      source_account_id: accountId,
+      source_account: sourceAccount.trim(),
       category_id: categoryId || null,
       notes: notes.trim(),
     })
@@ -159,18 +165,19 @@ export function TransactionForm({
 
         <div className="space-y-2">
           <Label htmlFor="account">Account</Label>
-          <Select value={accountId} onValueChange={setAccountId} required>
-            <SelectTrigger>
-              <SelectValue placeholder="Select account" />
-            </SelectTrigger>
-            <SelectContent>
-              {accounts?.map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Input
+            id="account"
+            list="txn-form-account-options"
+            value={sourceAccount}
+            onChange={(e) => setSourceAccount(e.target.value)}
+            placeholder="e.g., USAA Checking"
+            required
+          />
+          <datalist id="txn-form-account-options">
+            {accountSuggestions.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
         </div>
       </div>
 
@@ -206,7 +213,7 @@ export function TransactionForm({
         </Button>
         <Button
           type="submit"
-          disabled={isLoading || !description.trim() || !amount || !accountId}
+          disabled={isLoading || !description.trim() || !amount || !sourceAccount.trim()}
           className="flex-1"
         >
           {isLoading ? 'Saving...' : isEditing ? 'Save Changes' : 'Add Transaction'}

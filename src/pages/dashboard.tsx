@@ -23,7 +23,6 @@ import {
 } from '@/components/dashboard'
 import { useTransactions, useRecentTransactions, useMonthlyTotals } from '@/hooks/use-transactions'
 import { useCategories } from '@/hooks/use-categories'
-import { useAccounts } from '@/hooks/use-accounts'
 import { useBudgets } from '@/hooks/use-budgets'
 import { formatCurrency, getCurrentMonth } from '@/lib/utils'
 import { ArrowRight, TrendingUp, TrendingDown } from 'lucide-react'
@@ -44,7 +43,6 @@ export function DashboardPage() {
   } = useTransactions()
   const { data: recentTransactions, isLoading: recentLoading } = useRecentTransactions(5)
   const { data: categories } = useCategories()
-  const { data: accounts } = useAccounts()
   const { data: budgets } = useBudgets()
 
   const [yearMonth, setYearMonth] = useState<string>(getCurrentMonth())
@@ -184,7 +182,6 @@ export function DashboardPage() {
                     key={transaction.id}
                     transaction={transaction}
                     category={categories?.find((c) => c.id === transaction.category_id)}
-                    account={accounts?.find((a) => a.id === transaction.source_account_id)}
                   />
                 ))}
               </div>

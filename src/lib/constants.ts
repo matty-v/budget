@@ -8,14 +8,14 @@ export const STORAGE_KEYS = {
 } as const
 
 export const SHEET_NAMES = {
-  ACCOUNTS: 'Accounts',
   CATEGORIES: 'Categories',
   TRANSACTIONS: 'Transactions',
   BUDGETS: 'Budgets',
 } as const
 
+// The Transactions sheet column is still named `source_account_id` for
+// continuity, but its value is now a free-text account name rather than a UUID.
 export const SHEET_COLUMNS = {
-  ACCOUNTS: ['id', 'name', 'type', 'balance', 'is_active', 'created_at', 'updated_at'],
   CATEGORIES: ['id', 'name', 'type', 'icon', 'color', 'budget_amount', 'budget_cadence', 'is_active', 'created_at', 'updated_at'],
   TRANSACTIONS: ['id', 'date', 'description', 'amount', 'type', 'category_id', 'source_account_id', 'transfer_id', 'notes', 'created_at', 'updated_at'],
   BUDGETS: ['id', 'category_id', 'period_type', 'period_key', 'amount', 'created_at', 'updated_at'],
@@ -36,10 +36,3 @@ export const DEFAULT_CATEGORIES = [
   { name: 'Other Income', type: 'income', icon: '💵', color: '#CDDC39' },
 ] as const
 
-export const ACCOUNT_TYPES = [
-  { value: 'checking', label: 'Checking' },
-  { value: 'savings', label: 'Savings' },
-  { value: 'credit', label: 'Credit Card' },
-  { value: 'cash', label: 'Cash' },
-  { value: 'investment', label: 'Investment' },
-] as const

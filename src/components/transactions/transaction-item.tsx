@@ -3,12 +3,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Pencil, Trash2 } from 'lucide-react'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
-import type { Transaction, Category, Account } from '@/types'
+import type { Transaction, Category } from '@/types'
 
 interface TransactionItemProps {
   transaction: Transaction
   category?: Category
-  account?: Account
   onEdit?: (transaction: Transaction) => void
   onDelete?: (transaction: Transaction) => void
 }
@@ -16,7 +15,6 @@ interface TransactionItemProps {
 function TransactionItemInner({
   transaction,
   category,
-  account,
   onEdit,
   onDelete,
 }: TransactionItemProps) {
@@ -46,7 +44,7 @@ function TransactionItemInner({
             <div className="font-medium truncate">{transaction.description}</div>
             <div className="text-xs text-muted-foreground">
               {formatDate(transaction.date)}
-              {account && <span> · {account.name}</span>}
+              {transaction.source_account && <span> · {transaction.source_account}</span>}
               {category && <span> · {category.name}</span>}
               {isTransfer && <span> · Transfer</span>}
             </div>

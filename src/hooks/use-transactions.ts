@@ -19,8 +19,8 @@ export function useTransactions(filters?: TransactionFilters) {
       if (filters?.endDate) {
         transactions = transactions.filter((t) => t.date <= filters.endDate!)
       }
-      if (filters?.accountId) {
-        transactions = transactions.filter((t) => t.source_account_id === filters.accountId)
+      if (filters?.sourceAccount) {
+        transactions = transactions.filter((t) => t.source_account === filters.sourceAccount)
       }
       if (filters?.categoryId) {
         transactions = transactions.filter((t) => t.category_id === filters.categoryId)
@@ -171,7 +171,7 @@ export function useCreateTransfer() {
         amount: String(-amount),
         type: 'transfer',
         category_id: '',
-        source_account_id: data.from_account_id,
+        source_account_id: data.from_account,
         transfer_id: transferId,
         plaid_transaction_id: '',
         notes: data.notes || '',
@@ -187,7 +187,7 @@ export function useCreateTransfer() {
         amount: String(amount),
         type: 'transfer',
         category_id: '',
-        source_account_id: data.to_account_id,
+        source_account_id: data.to_account,
         transfer_id: transferId,
         plaid_transaction_id: '',
         notes: data.notes || '',

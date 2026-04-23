@@ -1,10 +1,9 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Wallet, ArrowLeftRight, Tag, PiggyBank, Settings } from 'lucide-react'
+import { Home, ArrowLeftRight, Tag, PiggyBank, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { to: '/', icon: Home, label: 'Home' },
-  { to: '/accounts', icon: Wallet, label: 'Accounts' },
   { to: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
   { to: '/categories', icon: Tag, label: 'Categories' },
   { to: '/budget', icon: PiggyBank, label: 'Budget' },

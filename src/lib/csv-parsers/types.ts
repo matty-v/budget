@@ -16,7 +16,7 @@ export interface CSVBankParser {
 export interface ImportableCSVTransaction extends ParsedTransaction {
   hash: string
   selected: boolean
-  accountId: string
+  sourceAccount: string
   categoryId: string
   isDuplicate: boolean
 }

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Wallet, ArrowLeftRight, Tag, Settings } from 'lucide-react'
+import { Home, Wallet, ArrowLeftRight, Tag, PiggyBank, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -7,6 +7,7 @@ const navItems = [
   { to: '/accounts', icon: Wallet, label: 'Accounts' },
   { to: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
   { to: '/categories', icon: Tag, label: 'Categories' },
+  { to: '/budget', icon: PiggyBank, label: 'Budget' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 

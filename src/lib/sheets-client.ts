@@ -1,5 +1,5 @@
 import { SHEETS_API_URL, STORAGE_KEYS, SHEET_NAMES } from './constants'
-import type { AccountRow, CategoryRow, TransactionRow } from '@/types'
+import type { AccountRow, BudgetRow, CategoryRow, TransactionRow } from '@/types'
 
 export interface BulkCreateRowsResponse {
   rows: Array<{
@@ -189,6 +189,17 @@ class SheetsClient {
         this.createRowsBulk(SHEET_NAMES.TRANSACTIONS, rows as unknown as Record<string, string>[]),
       updateRowsBulk: (updates: Array<{ rowIndex: number; data: Partial<TransactionRow> }>) =>
         this.updateRowsBulk(SHEET_NAMES.TRANSACTIONS, updates as unknown as Array<{ rowIndex: number; data: Record<string, string> }>),
+    }
+  }
+
+  budgets() {
+    return {
+      getRows: () => this.getRows<BudgetRow>(SHEET_NAMES.BUDGETS),
+      createRow: (data: BudgetRow) =>
+        this.createRow(SHEET_NAMES.BUDGETS, data as unknown as Record<string, string>),
+      updateRow: (rowIndex: number, data: Partial<BudgetRow>) =>
+        this.updateRow(SHEET_NAMES.BUDGETS, rowIndex, data as unknown as Record<string, string>),
+      deleteRow: (rowIndex: number) => this.deleteRow(SHEET_NAMES.BUDGETS, rowIndex),
     }
   }
 }

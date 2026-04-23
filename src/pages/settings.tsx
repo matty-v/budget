@@ -145,6 +145,7 @@ export function SettingsPage() {
             icon: cat.icon,
             color: cat.color,
             budget_amount: '',
+            budget_cadence: '',
             is_active: 'true',
             created_at: now,
             updated_at: now,

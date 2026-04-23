@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Category, CategoryFormData } from '@/types'
+import type { BudgetCadence, Category, CategoryFormData } from '@/types'
 
 const EMOJI_OPTIONS = ['🛒', '🍽️', '🚗', '💡', '🎬', '🏥', '🛍️', '🏠', '💰', '💼', '📈', '💵', '✈️', '📚', '🎮', '💪', '🎵', '🐕', '👶', '💄']
 
@@ -39,15 +39,20 @@ export function CategoryForm({
   const [budgetAmount, setBudgetAmount] = useState(
     defaultValues?.budget_amount?.toString() ?? ''
   )
+  const [budgetCadence, setBudgetCadence] = useState<'none' | BudgetCadence>(
+    defaultValues?.budget_cadence ?? 'none'
+  )
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    const resolvedCadence = budgetCadence === 'none' ? null : budgetCadence
     onSubmit({
       name: name.trim(),
       type: type as CategoryFormData['type'],
       icon,
       color,
-      budget_amount: budgetAmount ? parseFloat(budgetAmount) : null,
+      budget_amount: resolvedCadence && budgetAmount ? parseFloat(budgetAmount) : null,
+      budget_cadence: resolvedCadence,
     })
   }
 
@@ -115,15 +120,34 @@ export function CategoryForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="budget">Monthly Budget (optional)</Label>
-        <Input
-          id="budget"
-          type="number"
-          step="0.01"
-          value={budgetAmount}
-          onChange={(e) => setBudgetAmount(e.target.value)}
-          placeholder="0.00"
-        />
+        <Label>Budget</Label>
+        <div className="grid grid-cols-3 gap-2">
+          {(['none', 'monthly', 'annual'] as const).map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setBudgetCadence(c)}
+              className={`px-3 py-2 rounded-md text-sm border-2 transition-colors ${
+                budgetCadence === c
+                  ? 'border-primary bg-primary/10 text-foreground'
+                  : 'border-transparent bg-muted hover:bg-muted/80 text-muted-foreground'
+              }`}
+            >
+              {c === 'none' ? 'No budget' : c === 'monthly' ? 'Monthly' : 'Annual'}
+            </button>
+          ))}
+        </div>
+        {budgetCadence !== 'none' && (
+          <Input
+            id="budget"
+            type="number"
+            step="0.01"
+            min="0"
+            value={budgetAmount}
+            onChange={(e) => setBudgetAmount(e.target.value)}
+            placeholder={budgetCadence === 'monthly' ? '0.00 / month' : '0.00 / year'}
+          />
+        )}
       </div>
 
       <div className="flex gap-2 pt-4">

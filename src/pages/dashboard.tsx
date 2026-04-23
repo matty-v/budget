@@ -1,14 +1,29 @@
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/layout/page-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { TransactionItem } from '@/components/transactions/transaction-item'
 import { SpendingByCategory, IncomeExpenseChart, BudgetOverview } from '@/components/dashboard'
 import { useTransactions, useRecentTransactions, useMonthlyTotals } from '@/hooks/use-transactions'
 import { useCategories } from '@/hooks/use-categories'
 import { useAccounts } from '@/hooks/use-accounts'
-import { formatCurrency } from '@/lib/utils'
+import { useBudgets } from '@/hooks/use-budgets'
+import { formatCurrency, getCurrentMonth } from '@/lib/utils'
 import { ArrowRight, Loader2, TrendingUp, TrendingDown } from 'lucide-react'
+
+function formatMonthLabel(yearMonth: string): string {
+  const [yearStr, monthStr] = yearMonth.split('-')
+  const d = new Date(Number(yearStr), Number(monthStr) - 1, 1)
+  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+}
 
 export function DashboardPage() {
   const { income, expenses } = useMonthlyTotals()
@@ -16,6 +31,19 @@ export function DashboardPage() {
   const { data: recentTransactions, isLoading } = useRecentTransactions(5)
   const { data: categories } = useCategories()
   const { data: accounts } = useAccounts()
+  const { data: budgets } = useBudgets()
+
+  const [yearMonth, setYearMonth] = useState<string>(getCurrentMonth())
+
+  // Months from earliest transaction through current, descending
+  const monthOptions = useMemo(() => {
+    const current = getCurrentMonth()
+    const months = new Set<string>([current])
+    for (const t of allTransactions ?? []) {
+      if (t.date && t.date.length >= 7) months.add(t.date.slice(0, 7))
+    }
+    return Array.from(months).sort().reverse()
+  }, [allTransactions])
 
   return (
     <div className="space-y-6">
@@ -28,10 +56,28 @@ export function DashboardPage() {
       />
 
       {/* Budget Overview */}
-      <BudgetOverview
-        transactions={allTransactions ?? []}
-        categories={categories ?? []}
-      />
+      <div className="space-y-2">
+        <div className="flex items-center justify-end">
+          <Select value={yearMonth} onValueChange={setYearMonth}>
+            <SelectTrigger className="w-[180px] h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map((ym) => (
+                <SelectItem key={ym} value={ym}>
+                  {formatMonthLabel(ym)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <BudgetOverview
+          transactions={allTransactions ?? []}
+          categories={categories ?? []}
+          budgets={budgets ?? []}
+          yearMonth={yearMonth}
+        />
+      </div>
 
       {/* Income vs Expenses Line Chart */}
       <IncomeExpenseChart transactions={allTransactions ?? []} />

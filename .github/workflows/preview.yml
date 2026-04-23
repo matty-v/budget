@@ -9,6 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     # Skip cleanup job if PR was merged or closed
     if: github.event.action != 'closed'
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,6 +42,10 @@ jobs:
     runs-on: ubuntu-latest
     # Only run cleanup when PR is closed/merged
     if: github.event.action == 'closed'
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

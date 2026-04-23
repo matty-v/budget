@@ -36,8 +36,8 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
       {} as Record<string, { income: number; expenses: number }>
     )
 
-    // Convert to chart data and sort by month
-    return Object.entries(byMonth)
+    // Convert to chart data and sort by month, trim to last 12.
+    const points = Object.entries(byMonth)
       .map(([month, data]) => ({
         month: new Date(month + '-01').toLocaleDateString('en-US', {
           month: 'short',
@@ -48,14 +48,23 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
         expenses: data.expenses,
       }))
       .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
-      .slice(-6) // Last 6 months
+      .slice(-12) // Last 12 months — cumulative net benefits from longer horizon
+
+    // Second pass: compute running cumulative net across the visible window.
+    // Rebased to 0 at the first visible month (intuition: "what happened in
+    // this chart's time span"), not pulling in pre-window history.
+    let running = 0
+    return points.map((p) => {
+      running += p.income - p.expenses
+      return { ...p, net: running }
+    })
   }, [transactions])
 
   if (data.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Income vs Expenses</CardTitle>
+          <CardTitle className="text-base">Cashflow</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground text-center py-8">
@@ -84,9 +93,12 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
               <YAxis
                 tick={{ fontSize: 12 }}
                 stroke="hsl(var(--muted-foreground))"
-                tickFormatter={(value) =>
-                  value >= 1000 ? `$${(value / 1000).toFixed(0)}k` : `$${value}`
-                }
+                tickFormatter={(value) => {
+                  const abs = Math.abs(value)
+                  const formatted =
+                    abs >= 1000 ? `$${(abs / 1000).toFixed(0)}k` : `$${abs}`
+                  return value < 0 ? `-${formatted}` : formatted
+                }}
               />
               <Tooltip
                 formatter={(value) => formatCurrency(Number(value))}
@@ -103,8 +115,8 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
                 name="Income"
                 stroke="#00d4ff"
                 strokeWidth={2}
-                dot={{ fill: '#00d4ff', r: 4 }}
-                activeDot={{ r: 6 }}
+                dot={{ fill: '#00d4ff', r: 3 }}
+                activeDot={{ r: 5 }}
               />
               <Line
                 type="monotone"
@@ -112,8 +124,17 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
                 name="Expenses"
                 stroke="#ec4899"
                 strokeWidth={2}
-                dot={{ fill: '#ec4899', r: 4 }}
-                activeDot={{ r: 6 }}
+                dot={{ fill: '#ec4899', r: 3 }}
+                activeDot={{ r: 5 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="net"
+                name="Net (cumulative)"
+                stroke="#a78bfa"
+                strokeWidth={3}
+                dot={{ fill: '#a78bfa', r: 4 }}
+                activeDot={{ r: 7 }}
               />
             </LineChart>
           </ResponsiveContainer>

@@ -36,6 +36,7 @@ import {
 import { toast } from '@/hooks/use-toast'
 import { formatCurrency, getCurrentMonth } from '@/lib/utils'
 import { Sparkles, Wand2 } from 'lucide-react'
+import { BudgetsPageSkeleton } from '@/components/budgets/budgets-page-skeleton'
 import type { BudgetCadence, BudgetPeriodType, Category } from '@/types'
 
 function formatMonthLabel(yearMonth: string): string {
@@ -263,7 +264,7 @@ export function BudgetsPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Budget" />
-        <p className="text-sm text-muted-foreground">Loading...</p>
+        <BudgetsPageSkeleton />
       </div>
     )
   }

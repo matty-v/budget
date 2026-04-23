@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { ErrorState } from '@/components/ui/error-state'
 import {
   TransactionList,
+  TransactionListSkeleton,
   TransactionDialog,
   TransactionFilters,
   EMPTY_FILTERS,
@@ -14,11 +15,11 @@ import { useTransactions, useDeleteTransaction } from '@/hooks/use-transactions'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useCategories } from '@/hooks/use-categories'
 import { toast } from '@/hooks/use-toast'
-import { Plus, Loader2, Upload } from 'lucide-react'
+import { Plus, Upload } from 'lucide-react'
 import type { Transaction } from '@/types'
 
 export function TransactionsPage() {
-  const { data: transactions, isLoading, error } = useTransactions()
+  const { data: transactions, isLoading, error, refetch } = useTransactions()
   const { data: accounts } = useAccounts()
   const { data: categories } = useCategories()
   const deleteTransaction = useDeleteTransaction()
@@ -112,13 +113,15 @@ export function TransactionsPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Transactions" />
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-destructive text-center">
-              Failed to load transactions. Please check your connection in Settings.
-            </p>
-          </CardContent>
-        </Card>
+        <ErrorState
+          title="Couldn't load transactions"
+          message={
+            error instanceof Error
+              ? error.message
+              : 'Failed to load transactions. Please check your connection in Settings.'
+          }
+          onRetry={() => refetch()}
+        />
       </div>
     )
   }
@@ -152,9 +155,7 @@ export function TransactionsPage() {
       />
 
       {isLoading ? (
-        <div className="flex justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
+        <TransactionListSkeleton />
       ) : (
         <TransactionList
           transactions={filteredTransactions}

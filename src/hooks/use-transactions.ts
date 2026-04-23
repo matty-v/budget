@@ -45,6 +45,18 @@ export function useRecentTransactions(limit: number = 5) {
   }
 }
 
+// Memoized slice of transactions for a given YYYY-MM window. Composes on
+// useTransactions (no extra fetch) but gives callers a pre-filtered array
+// instead of making them recompute the slice every render.
+export function useTransactionsForMonth(yearMonth: string) {
+  const { data, ...rest } = useTransactions()
+
+  return {
+    data: data?.filter((t) => t.date.startsWith(yearMonth)),
+    ...rest,
+  }
+}
+
 export function useCreateTransaction() {
   const queryClient = useQueryClient()
 

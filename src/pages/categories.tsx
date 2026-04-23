@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { CategoryList, CategoryDialog } from '@/components/categories'
+import { ErrorState } from '@/components/ui/error-state'
+import { CategoryList, CategoryListSkeleton, CategoryDialog } from '@/components/categories'
 import { useCategories, useDeleteCategory } from '@/hooks/use-categories'
 import { toast } from '@/hooks/use-toast'
-import { Plus, Loader2 } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import type { Category } from '@/types'
 
 export function CategoriesPage() {
-  const { data: categories, isLoading, error } = useCategories()
+  const { data: categories, isLoading, error, refetch } = useCategories()
   const deleteCategory = useDeleteCategory()
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -49,13 +49,15 @@ export function CategoriesPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Categories" />
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-destructive text-center">
-              Failed to load categories. Please check your connection in Settings.
-            </p>
-          </CardContent>
-        </Card>
+        <ErrorState
+          title="Couldn't load categories"
+          message={
+            error instanceof Error
+              ? error.message
+              : 'Failed to load categories. Please check your connection in Settings.'
+          }
+          onRetry={() => refetch()}
+        />
       </div>
     )
   }
@@ -73,9 +75,7 @@ export function CategoriesPage() {
       />
 
       {isLoading ? (
-        <div className="flex justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
+        <CategoryListSkeleton />
       ) : (
         <CategoryList
           categories={categories ?? []}

@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Pencil, Trash2 } from 'lucide-react'
@@ -12,7 +13,7 @@ interface TransactionItemProps {
   onDelete?: (transaction: Transaction) => void
 }
 
-export function TransactionItem({
+function TransactionItemInner({
   transaction,
   category,
   account,
@@ -23,7 +24,10 @@ export function TransactionItem({
   const isTransfer = transaction.type === 'transfer'
 
   return (
-    <Card className="glass-card-hover">
+    <Card
+      className="glass-card-hover"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '0 72px' }}
+    >
       <CardContent className="p-4">
         <div className="flex items-center gap-3">
           {category ? (
@@ -85,3 +89,8 @@ export function TransactionItem({
     </Card>
   )
 }
+
+// Memoize so 3k-row lists don't re-render every row on unrelated parent state
+// changes (month picker, filter inputs, etc). The props are a small, shallow-
+// comparable set so the default comparison is sufficient.
+export const TransactionItem = memo(TransactionItemInner)

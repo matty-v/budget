@@ -1,8 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/layout/page-header'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { ErrorState } from '@/components/ui/error-state'
 import {
   Select,
@@ -11,21 +8,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { TransactionItem } from '@/components/transactions/transaction-item'
 import {
   SpendingByCategory,
   IncomeExpenseChart,
   BudgetOverview,
   ChartCardSkeleton,
   BudgetOverviewSkeleton,
-  RecentTransactionsSkeleton,
-  StatCardsSkeleton,
 } from '@/components/dashboard'
-import { useTransactions, useRecentTransactions, useMonthlyTotals } from '@/hooks/use-transactions'
+import { useTransactions } from '@/hooks/use-transactions'
 import { useCategories } from '@/hooks/use-categories'
 import { useBudgets } from '@/hooks/use-budgets'
-import { formatCurrency, getCurrentMonth } from '@/lib/utils'
-import { ArrowRight, TrendingUp, TrendingDown } from 'lucide-react'
+import { getCurrentMonth } from '@/lib/utils'
 
 function formatMonthLabel(yearMonth: string): string {
   const [yearStr, monthStr] = yearMonth.split('-')
@@ -34,14 +27,12 @@ function formatMonthLabel(yearMonth: string): string {
 }
 
 export function DashboardPage() {
-  const { income, expenses } = useMonthlyTotals()
   const {
     data: allTransactions,
     isLoading: transactionsLoading,
     error: transactionsError,
     refetch: refetchTransactions,
   } = useTransactions()
-  const { data: recentTransactions, isLoading: recentLoading } = useRecentTransactions(5)
   const { data: categories } = useCategories()
   const { data: budgets } = useBudgets()
 
@@ -76,9 +67,46 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Dashboard" />
+      <PageHeader
+        title="Dashboard"
+        action={
+          <Select value={yearMonth} onValueChange={setYearMonth}>
+            <SelectTrigger className="w-[180px] h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map((ym) => (
+                <SelectItem key={ym} value={ym}>
+                  {formatMonthLabel(ym)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
+      />
 
-      {/* Spending Categories Bar Chart */}
+      {/* Hero row: Budget Overview + Cashflow chart side-by-side on lg+,
+          stacked on mobile/tablet. Answers "did I meet budget?" and
+          "am I trending positive?" at-a-glance. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {transactionsLoading ? (
+          <BudgetOverviewSkeleton />
+        ) : (
+          <BudgetOverview
+            transactions={allTransactions ?? []}
+            categories={categories ?? []}
+            budgets={budgets ?? []}
+            yearMonth={yearMonth}
+          />
+        )}
+        {transactionsLoading ? (
+          <ChartCardSkeleton height="h-64" />
+        ) : (
+          <IncomeExpenseChart transactions={allTransactions ?? []} />
+        )}
+      </div>
+
+      {/* Spending by Category — full width below the hero row. */}
       {transactionsLoading ? (
         <ChartCardSkeleton height="h-48" />
       ) : (
@@ -86,112 +114,6 @@ export function DashboardPage() {
           transactions={allTransactions ?? []}
           categories={categories ?? []}
         />
-      )}
-
-      {/* Budget Overview */}
-      {transactionsLoading ? (
-        <BudgetOverviewSkeleton />
-      ) : (
-        <div className="space-y-2">
-          <div className="flex items-center justify-end">
-            <Select value={yearMonth} onValueChange={setYearMonth}>
-              <SelectTrigger className="w-[180px] h-8 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {monthOptions.map((ym) => (
-                  <SelectItem key={ym} value={ym}>
-                    {formatMonthLabel(ym)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <BudgetOverview
-            transactions={allTransactions ?? []}
-            categories={categories ?? []}
-            budgets={budgets ?? []}
-            yearMonth={yearMonth}
-          />
-        </div>
-      )}
-
-      {/* Cashflow chart */}
-      {transactionsLoading ? (
-        <ChartCardSkeleton height="h-64" />
-      ) : (
-        <IncomeExpenseChart transactions={allTransactions ?? []} />
-      )}
-
-      {/* Individual Income and Expenses by Month */}
-      {transactionsLoading ? (
-        <StatCardsSkeleton />
-      ) : (
-        <div className="grid grid-cols-2 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-green-600" />
-                Income
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-green-600">
-                +{formatCurrency(income)}
-              </div>
-              <p className="text-xs text-muted-foreground">This month</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-red-600" />
-                Expenses
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-red-600">
-                -{formatCurrency(expenses)}
-              </div>
-              <p className="text-xs text-muted-foreground">This month</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Recent Transactions */}
-      {recentLoading ? (
-        <RecentTransactionsSkeleton />
-      ) : (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Recent Transactions</CardTitle>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/transactions" className="flex items-center gap-1">
-                View all
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {recentTransactions && recentTransactions.length > 0 ? (
-              <div className="space-y-2">
-                {recentTransactions.map((transaction) => (
-                  <TransactionItem
-                    key={transaction.id}
-                    transaction={transaction}
-                    category={categories?.find((c) => c.id === transaction.category_id)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No transactions yet. Add your first transaction to get started.
-              </p>
-            )}
-          </CardContent>
-        </Card>
       )}
     </div>
   )

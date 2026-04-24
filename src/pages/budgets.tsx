@@ -328,7 +328,7 @@ export function BudgetsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {tabCategories.map((category) => {
             const override = overrideFor(category)
             return (
@@ -392,7 +392,7 @@ export function BudgetsPage() {
             <Wand2 className="h-4 w-4" />
             Unbudgeted categories
           </div>
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {unbudgetedCategories.map((category) => (
               <Card key={category.id}>
                 <CardContent className="p-3 flex items-center gap-2">

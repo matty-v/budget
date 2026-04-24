@@ -3,7 +3,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export function CategoryListSkeleton({ count = 8 }: { count?: number }) {
   return (
-    <div className="space-y-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
       {Array.from({ length: count }).map((_, i) => (
         <Card key={i}>
           <CardContent className="p-4 flex items-center gap-3">

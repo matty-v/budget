@@ -10,14 +10,16 @@ const navItems = [
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 
+// Bottom nav for mobile/tablet. On lg+ the SideNav takes over and this hides.
 export function NavBar() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-background border-t">
+    <nav className="fixed bottom-0 left-0 right-0 bg-background border-t lg:hidden">
       <div className="container max-w-lg mx-auto px-4 flex justify-between py-3">
         {navItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
+            end={to === '/'}
             aria-label={label}
             className={({ isActive }) =>
               cn(

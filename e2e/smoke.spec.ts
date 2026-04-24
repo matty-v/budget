@@ -26,7 +26,7 @@ test.describe('Smoke Tests', () => {
 
   test('budget page loads via navigation', async ({ page }) => {
     await page.goto('/')
-    await page.locator('nav a[href="#/budget"]').click()
+    await page.locator('a[href="#/budget"]:visible').first().click()
     await expect(page.getByRole('heading', { name: 'Budget' })).toBeVisible()
     // Cadence tabs render
     await expect(page.getByRole('button', { name: 'Monthly' })).toBeVisible()
@@ -45,7 +45,7 @@ test.describe('Smoke Tests', () => {
     await expect(page.getByRole('heading', { name: 'Categories' })).toBeVisible()
 
     // Navigate to Budget
-    await page.locator('nav a[href="#/budget"]').click()
+    await page.locator('a[href="#/budget"]:visible').first().click()
     await expect(page.getByRole('heading', { name: 'Budget' })).toBeVisible()
 
     // Navigate to Settings

@@ -24,7 +24,7 @@ export function CategoryList({ categories, onEdit, onDelete }: CategoryListProps
       {expenseCategories.length > 0 && (
         <div>
           <h3 className="text-sm font-medium text-muted-foreground mb-3">Expenses</h3>
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {expenseCategories.map((category) => (
               <CategoryItem
                 key={category.id}
@@ -40,7 +40,7 @@ export function CategoryList({ categories, onEdit, onDelete }: CategoryListProps
       {incomeCategories.length > 0 && (
         <div>
           <h3 className="text-sm font-medium text-muted-foreground mb-3">Income</h3>
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {incomeCategories.map((category) => (
               <CategoryItem
                 key={category.id}

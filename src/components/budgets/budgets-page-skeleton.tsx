@@ -9,7 +9,7 @@ export function BudgetsPageSkeleton() {
         <Skeleton className="h-10 w-full" />
       </div>
       <Skeleton className="h-8 w-full" />
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         {Array.from({ length: 6 }).map((_, i) => (
           <Card key={i}>
             <CardContent className="p-3 space-y-2">

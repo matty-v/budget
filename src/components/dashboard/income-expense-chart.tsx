@@ -62,12 +62,12 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
 
   if (data.length === 0) {
     return (
-      <Card>
+      <Card className="flex flex-col h-full">
         <CardHeader>
           <CardTitle className="text-base">Cashflow</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-8">
+        <CardContent className="flex-1 flex items-center justify-center">
+          <p className="text-sm text-muted-foreground text-center">
             No transaction data to display
           </p>
         </CardContent>
@@ -76,12 +76,12 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
   }
 
   return (
-    <Card>
+    <Card className="flex flex-col h-full">
       <CardHeader>
-        <CardTitle className="text-base">Income vs Expenses</CardTitle>
+        <CardTitle className="text-base">Cashflow</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="h-64">
+      <CardContent className="flex-1 flex flex-col">
+        <div className="flex-1 min-h-[16rem]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />

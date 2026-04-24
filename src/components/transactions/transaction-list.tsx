@@ -1,4 +1,5 @@
 import { TransactionItem } from './transaction-item'
+import { TransactionTable } from './transaction-table'
 import type { Transaction, Category } from '@/types'
 import { useCategorizeTransactions } from '@/hooks/use-ai-categorization'
 import { STORAGE_KEYS } from '@/lib/constants'
@@ -143,38 +144,53 @@ export function TransactionList({
           </Button>
         </div>
       )}
-      {groupByDate ? (
-        sortedDates.map((date) => (
-          <div key={date}>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">
-              {formatDateHeader(date)}
-            </h3>
-            <div className="space-y-2">
-              {grouped[date].map((transaction) => (
-                <TransactionItem
-                  key={transaction.id}
-                  transaction={transaction}
-                  category={categories.find((c) => c.id === transaction.category_id)}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                />
-              ))}
-            </div>
+      {/* Desktop: flat table view */}
+      <div className="hidden lg:block">
+        <TransactionTable
+          transactions={transactions}
+          categories={categories}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
+      </div>
+
+      {/* Mobile/tablet: card-based, optionally date-grouped */}
+      <div className="lg:hidden">
+        {groupByDate ? (
+          <div className="space-y-6">
+            {sortedDates.map((date) => (
+              <div key={date}>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                  {formatDateHeader(date)}
+                </h3>
+                <div className="space-y-2">
+                  {grouped[date].map((transaction) => (
+                    <TransactionItem
+                      key={transaction.id}
+                      transaction={transaction}
+                      category={categories.find((c) => c.id === transaction.category_id)}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
-        ))
-      ) : (
-        <div className="space-y-2">
-          {transactions.map((transaction) => (
-            <TransactionItem
-              key={transaction.id}
-              transaction={transaction}
-              category={categories.find((c) => c.id === transaction.category_id)}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
-          ))}
-        </div>
-      )}
+        ) : (
+          <div className="space-y-2">
+            {transactions.map((transaction) => (
+              <TransactionItem
+                key={transaction.id}
+                transaction={transaction}
+                category={categories.find((c) => c.id === transaction.category_id)}
+                onEdit={onEdit}
+                onDelete={onDelete}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -71,6 +71,36 @@ export function RecentTransactionsSkeleton() {
   )
 }
 
+export function OutliersSkeleton() {
+  return (
+    <Card className="flex flex-col h-full">
+      <CardHeader className="pb-2">
+        <Skeleton className="h-4 w-24" />
+      </CardHeader>
+      <CardContent className="flex-1 space-y-4">
+        <Skeleton className="h-3 w-28" />
+        {[0, 1, 2].map((i) => (
+          <div key={`tb-${i}`} className="flex items-center justify-between">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        ))}
+        <Skeleton className="h-3 w-32 mt-4" />
+        {[0, 1, 2, 3].map((i) => (
+          <div key={`tx-${i}`} className="flex items-center gap-2">
+            <Skeleton className="h-6 w-6 rounded-full" />
+            <div className="flex-1 space-y-1">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+            <Skeleton className="h-4 w-16" />
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
 export function StatCardsSkeleton() {
   return (
     <div className="grid grid-cols-2 gap-4">

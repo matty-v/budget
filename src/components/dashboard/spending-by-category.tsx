@@ -7,12 +7,22 @@ import type { Transaction, Category } from '@/types'
 interface SpendingByCategoryProps {
   transactions: Transaction[]
   categories: Category[]
+  /** Scope the chart to a single YYYY-MM period. Omit to show all-time. */
+  yearMonth?: string
 }
 
-export function SpendingByCategory({ transactions, categories }: SpendingByCategoryProps) {
+export function SpendingByCategory({
+  transactions,
+  categories,
+  yearMonth,
+}: SpendingByCategoryProps) {
   const data = useMemo(() => {
-    // Only include expenses
-    const expenses = transactions.filter((t) => t.type === 'expense')
+    // Only include expenses within the scoped period (if any)
+    const expenses = transactions.filter(
+      (t) =>
+        t.type === 'expense' &&
+        (yearMonth ? t.date.startsWith(yearMonth) : true)
+    )
 
     // Group by category
     const byCategory = expenses.reduce(
@@ -35,17 +45,21 @@ export function SpendingByCategory({ transactions, categories }: SpendingByCateg
         }
       })
       .sort((a, b) => b.value - a.value)
-  }, [transactions, categories])
+  }, [transactions, categories, yearMonth])
+
+  const title = 'Spending by Category'
 
   if (data.length === 0) {
     return (
-      <Card>
+      <Card className="flex flex-col h-full">
         <CardHeader>
-          <CardTitle className="text-base">Spending by Category</CardTitle>
+          <CardTitle className="text-base">{title}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-8">
-            No expense data to display
+        <CardContent className="flex-1 flex items-center justify-center">
+          <p className="text-sm text-muted-foreground text-center">
+            {yearMonth
+              ? 'No expenses in this period yet.'
+              : 'No expense data to display'}
           </p>
         </CardContent>
       </Card>
@@ -53,12 +67,12 @@ export function SpendingByCategory({ transactions, categories }: SpendingByCateg
   }
 
   return (
-    <Card>
+    <Card className="flex flex-col h-full">
       <CardHeader>
-        <CardTitle className="text-base">Spending by Category</CardTitle>
+        <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="h-64">
+      <CardContent className="flex-1 flex flex-col">
+        <div className="flex-1 min-h-[16rem]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />

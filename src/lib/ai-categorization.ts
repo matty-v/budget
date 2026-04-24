@@ -130,7 +130,7 @@ function buildBulkCategorizationPrompt(
       description: t.description,
       amount: Math.abs(t.amount),
       date: t.date,
-      account_id: t.source_account_id,
+      account: t.source_account,
     })),
     null,
     2

@@ -6,12 +6,6 @@ test.describe('Smoke Tests', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
   })
 
-  test('accounts page loads via navigation', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('link', { name: 'Accounts' }).click()
-    await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible()
-  })
-
   test('transactions page loads via navigation', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('link', { name: 'Transactions' }).click()
@@ -41,10 +35,6 @@ test.describe('Smoke Tests', () => {
 
   test('navigation bar works', async ({ page }) => {
     await page.goto('/')
-
-    // Navigate to Accounts
-    await page.getByRole('link', { name: 'Accounts' }).click()
-    await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible()
 
     // Navigate to Transactions
     await page.getByRole('link', { name: 'Transactions' }).click()

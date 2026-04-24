@@ -1,8 +1,5 @@
 import { generateId } from './utils'
 import type {
-  Account,
-  AccountRow,
-  AccountFormData,
   Budget,
   BudgetCadence,
   BudgetFormData,
@@ -32,42 +29,6 @@ function parseNumber(value: string | number | undefined): number {
     return parseFloat(value) || 0
   }
   return 0
-}
-
-// Account transformers
-export function parseAccountRow(row: AccountRow): Account {
-  return {
-    id: row.id,
-    name: row.name,
-    type: row.type as Account['type'],
-    balance: parseNumber(row.balance),
-    is_active: parseBoolean(row.is_active),
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  }
-}
-
-export function serializeAccount(data: AccountFormData): AccountRow {
-  const now = new Date().toISOString()
-  return {
-    id: generateId(),
-    name: data.name,
-    type: data.type,
-    balance: String(data.balance),
-    is_active: 'true',
-    created_at: now,
-    updated_at: now,
-  }
-}
-
-export function serializeAccountUpdate(data: Partial<AccountFormData>): Partial<AccountRow> {
-  const row: Partial<AccountRow> = {
-    updated_at: new Date().toISOString(),
-  }
-  if (data.name !== undefined) row.name = data.name
-  if (data.type !== undefined) row.type = data.type
-  if (data.balance !== undefined) row.balance = String(data.balance)
-  return row
 }
 
 // Category transformers
@@ -176,7 +137,9 @@ export function parseTransactionRow(row: TransactionRow): Transaction {
     amount: parseNumber(row.amount),
     type: row.type as Transaction['type'],
     category_id: row.category_id || null,
-    source_account_id: row.source_account_id,
+    // The sheet column is still named source_account_id — its value is now
+    // the free-text account name instead of a UUID.
+    source_account: row.source_account_id || '',
     transfer_id: row.transfer_id || null,
     plaid_transaction_id: row.plaid_transaction_id || null,
     notes: row.notes || '',
@@ -194,7 +157,7 @@ export function serializeTransaction(data: TransactionFormData): TransactionRow 
     amount: String(data.amount),
     type: data.type,
     category_id: data.category_id || '',
-    source_account_id: data.source_account_id,
+    source_account_id: data.source_account,
     transfer_id: '',
     plaid_transaction_id: data.plaid_transaction_id || '',
     notes: data.notes || '',
@@ -214,7 +177,7 @@ export function serializeTransactionUpdate(
   if (data.amount !== undefined) row.amount = String(data.amount)
   if (data.type !== undefined) row.type = data.type
   if (data.category_id !== undefined) row.category_id = data.category_id || ''
-  if (data.source_account_id !== undefined) row.source_account_id = data.source_account_id
+  if (data.source_account !== undefined) row.source_account_id = data.source_account
   if (data.notes !== undefined) row.notes = data.notes
   return row
 }

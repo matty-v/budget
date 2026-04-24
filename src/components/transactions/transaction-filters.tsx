@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent } from '@/components/ui/card'
 import { Search, X } from 'lucide-react'
-import type { Account, Category } from '@/types'
+import type { Category } from '@/types'
 
 export type TransactionSortBy =
   | 'date_desc'
@@ -21,7 +21,7 @@ export type TransactionSortBy =
 export interface TransactionFilterValues {
   dateFrom: string
   dateTo: string
-  accountId: string
+  sourceAccount: string
   categoryId: string
   type: string
   searchText: string
@@ -31,7 +31,7 @@ export interface TransactionFilterValues {
 interface TransactionFiltersProps {
   filters: TransactionFilterValues
   onFiltersChange: (filters: TransactionFilterValues) => void
-  accounts: Account[]
+  accountOptions: string[]  // distinct source_account values to suggest in the datalist
   categories: Category[]
 }
 
@@ -40,7 +40,7 @@ const DEFAULT_SORT: TransactionSortBy = 'date_desc'
 const EMPTY_FILTERS: TransactionFilterValues = {
   dateFrom: '',
   dateTo: '',
-  accountId: '',
+  sourceAccount: '',
   categoryId: '',
   type: '',
   searchText: '',
@@ -50,13 +50,13 @@ const EMPTY_FILTERS: TransactionFilterValues = {
 export function TransactionFilters({
   filters,
   onFiltersChange,
-  accounts,
+  accountOptions,
   categories,
 }: TransactionFiltersProps) {
   const hasActiveFilters =
     filters.dateFrom !== '' ||
     filters.dateTo !== '' ||
-    filters.accountId !== '' ||
+    filters.sourceAccount !== '' ||
     filters.categoryId !== '' ||
     filters.type !== '' ||
     filters.searchText !== '' ||
@@ -122,17 +122,17 @@ export function TransactionFilters({
           <div className="space-y-1">
             <Label className="text-xs">Account</Label>
             <Select
-              value={filters.accountId}
-              onValueChange={(value) => updateFilter('accountId', value === 'all' ? '' : value)}
+              value={filters.sourceAccount}
+              onValueChange={(value) => updateFilter('sourceAccount', value === 'all' ? '' : value)}
             >
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="All accounts" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All accounts</SelectItem>
-                {accounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.name}
+                {accountOptions.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
                   </SelectItem>
                 ))}
               </SelectContent>

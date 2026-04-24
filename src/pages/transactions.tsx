@@ -12,7 +12,6 @@ import {
 import { CSVImportDialog } from '@/components/csv-import'
 import type { TransactionFilterValues } from '@/components/transactions'
 import { useTransactions, useDeleteTransaction } from '@/hooks/use-transactions'
-import { useAccounts } from '@/hooks/use-accounts'
 import { useCategories } from '@/hooks/use-categories'
 import { toast } from '@/hooks/use-toast'
 import { Plus, Upload } from 'lucide-react'
@@ -20,7 +19,6 @@ import type { Transaction } from '@/types'
 
 export function TransactionsPage() {
   const { data: transactions, isLoading, error, refetch } = useTransactions()
-  const { data: accounts } = useAccounts()
   const { data: categories } = useCategories()
   const deleteTransaction = useDeleteTransaction()
 
@@ -28,6 +26,17 @@ export function TransactionsPage() {
   const [csvImportOpen, setCsvImportOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>()
   const [filters, setFilters] = useState<TransactionFilterValues>(EMPTY_FILTERS)
+
+  // Distinct source_account values from the loaded transactions — feeds the
+  // filter bar's datalist so the user gets autocomplete suggestions sourced
+  // from what they've actually used.
+  const accountOptions = useMemo(() => {
+    const names = new Set<string>()
+    for (const t of transactions ?? []) {
+      if (t.source_account) names.add(t.source_account)
+    }
+    return Array.from(names).sort()
+  }, [transactions])
 
   // Filter + sort transactions based on current filter values
   const filteredTransactions = useMemo(() => {
@@ -39,7 +48,7 @@ export function TransactionsPage() {
     const result = transactions.filter((t) => {
       if (filters.dateFrom && t.date < filters.dateFrom) return false
       if (filters.dateTo && t.date > filters.dateTo) return false
-      if (filters.accountId && t.source_account_id !== filters.accountId) return false
+      if (filters.sourceAccount && t.source_account !== filters.sourceAccount) return false
       if (filters.categoryId && t.category_id !== filters.categoryId) return false
       if (filters.type && t.type !== filters.type) return false
 
@@ -49,6 +58,7 @@ export function TransactionsPage() {
           t.description,
           t.notes,
           cat?.name,
+          t.source_account,
         ]
           .filter(Boolean)
           .join(' ')
@@ -150,7 +160,7 @@ export function TransactionsPage() {
       <TransactionFilters
         filters={filters}
         onFiltersChange={setFilters}
-        accounts={accounts ?? []}
+        accountOptions={accountOptions}
         categories={categories ?? []}
       />
 
@@ -160,7 +170,6 @@ export function TransactionsPage() {
         <TransactionList
           transactions={filteredTransactions}
           categories={categories ?? []}
-          accounts={accounts ?? []}
           onEdit={handleEdit}
           onDelete={handleDelete}
           groupByDate={filters.sortBy === 'date_desc' || filters.sortBy === 'date_asc'}

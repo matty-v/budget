@@ -1,5 +1,5 @@
 import { TransactionItem } from './transaction-item'
-import type { Transaction, Category, Account } from '@/types'
+import type { Transaction, Category } from '@/types'
 import { useCategorizeTransactions } from '@/hooks/use-ai-categorization'
 import { STORAGE_KEYS } from '@/lib/constants'
 import { Sparkles, Loader2 } from 'lucide-react'
@@ -35,7 +35,6 @@ function formatDateHeader(dateStr: string): string {
 interface TransactionListProps {
   transactions: Transaction[]
   categories: Category[]
-  accounts: Account[]
   onEdit?: (transaction: Transaction) => void
   onDelete?: (transaction: Transaction) => void
   // When true (default), transactions are rendered in date-grouped sections
@@ -48,7 +47,6 @@ interface TransactionListProps {
 export function TransactionList({
   transactions,
   categories,
-  accounts,
   onEdit,
   onDelete,
   groupByDate = true,
@@ -157,7 +155,6 @@ export function TransactionList({
                   key={transaction.id}
                   transaction={transaction}
                   category={categories.find((c) => c.id === transaction.category_id)}
-                  account={accounts.find((a) => a.id === transaction.source_account_id)}
                   onEdit={onEdit}
                   onDelete={onDelete}
                 />
@@ -172,7 +169,6 @@ export function TransactionList({
               key={transaction.id}
               transaction={transaction}
               category={categories.find((c) => c.id === transaction.category_id)}
-              account={accounts.find((a) => a.id === transaction.source_account_id)}
               onEdit={onEdit}
               onDelete={onDelete}
             />

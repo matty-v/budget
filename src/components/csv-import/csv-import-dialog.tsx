@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -15,8 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useAccounts } from '@/hooks/use-accounts'
 import { useCategories } from '@/hooks/use-categories'
 import { useCreateTransactionsBulk, useTransactions } from '@/hooks/use-transactions'
 import { toast } from '@/hooks/use-toast'
@@ -45,11 +45,18 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 })
   const [dragActive, setDragActive] = useState(false)
 
-  const { data: accounts } = useAccounts()
   const { data: categories } = useCategories()
   const { data: existingTransactions } = useTransactions()
   const createTransactionsBulk = useCreateTransactionsBulk()
   const { startProgress, updateProgress, completeProgress } = useCategorizationProgress()
+
+  const accountSuggestions = useMemo(() => {
+    const set = new Set<string>()
+    for (const t of existingTransactions ?? []) {
+      if (t.source_account) set.add(t.source_account)
+    }
+    return Array.from(set).sort()
+  }, [existingTransactions])
 
   const processCSVFile = useCallback(
     async (file: File) => {
@@ -86,7 +93,7 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
               ...t,
               hash,
               selected: !existingHashes.has(hash), // Auto-deselect duplicates
-              accountId: '',
+              sourceAccount: '',
               categoryId: '',
               isDuplicate: existingHashes.has(hash),
             }
@@ -102,7 +109,7 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
           description: t.description,
           amount: t.amount,
           type: t.type,
-          source_account_id: '',
+          source_account: '',
           category_id: null,
           notes: '',
           plaid_transaction_id: t.hash,
@@ -178,9 +185,9 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
     )
   }
 
-  const updateTransactionAccount = (hash: string, accountId: string) => {
+  const updateTransactionAccount = (hash: string, sourceAccount: string) => {
     setTransactions((prev) =>
-      prev.map((t) => (t.hash === hash ? { ...t, accountId } : t))
+      prev.map((t) => (t.hash === hash ? { ...t, sourceAccount } : t))
     )
   }
 
@@ -198,12 +205,12 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
     setTransactions((prev) => prev.map((t) => ({ ...t, selected: false })))
   }
 
-  const setAllAccounts = (accountId: string) => {
-    setTransactions((prev) => prev.map((t) => ({ ...t, accountId })))
+  const setAllAccounts = (sourceAccount: string) => {
+    setTransactions((prev) => prev.map((t) => ({ ...t, sourceAccount })))
   }
 
   const importTransactions = async () => {
-    const selectedTransactions = transactions.filter((t) => t.selected && t.accountId)
+    const selectedTransactions = transactions.filter((t) => t.selected && t.sourceAccount)
 
     if (selectedTransactions.length === 0) {
       toast({
@@ -224,7 +231,7 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
         description: t.description,
         amount: t.amount,
         type: t.type,
-        source_account_id: t.accountId,
+        source_account: t.sourceAccount,
         category_id: t.categoryId || null,
         notes: `Imported from ${detectedBank?.bankName || 'CSV'}`,
         plaid_transaction_id: t.hash,
@@ -277,7 +284,7 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
   }
 
   const selectedCount = transactions.filter((t) => t.selected).length
-  const readyToImport = transactions.filter((t) => t.selected && t.accountId).length
+  const readyToImport = transactions.filter((t) => t.selected && t.sourceAccount).length
   const duplicateCount = transactions.filter((t) => t.isDuplicate).length
 
   return (
@@ -341,6 +348,11 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
 
         {step === 'review' && (
           <div className="space-y-4">
+            <datalist id="csv-import-account-options">
+              {accountSuggestions.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
             {/* Duplicate warning */}
             {duplicateCount > 0 && (
               <div className="flex items-center gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-sm">
@@ -363,19 +375,16 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
                 </Button>
               </div>
               <div className="flex items-center gap-2">
-                <Label className="text-sm whitespace-nowrap">Set all to:</Label>
-                <Select onValueChange={setAllAccounts}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Account" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {accounts?.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="bulk-account" className="text-sm whitespace-nowrap">Set all to:</Label>
+                <Input
+                  id="bulk-account"
+                  list="csv-import-account-options"
+                  placeholder="Account"
+                  className="w-40"
+                  onBlur={(e) => {
+                    if (e.target.value) setAllAccounts(e.target.value.trim())
+                  }}
+                />
               </div>
             </div>
 
@@ -430,21 +439,15 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
 
                         {t.selected && (
                           <div className="grid grid-cols-2 gap-2">
-                            <Select
-                              value={t.accountId}
-                              onValueChange={(v) => updateTransactionAccount(t.hash, v)}
-                            >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue placeholder="Select account *" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {accounts?.map((account) => (
-                                  <SelectItem key={account.id} value={account.id}>
-                                    {account.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <Input
+                              value={t.sourceAccount}
+                              onChange={(e) =>
+                                updateTransactionAccount(t.hash, e.target.value)
+                              }
+                              list="csv-import-account-options"
+                              placeholder="Account *"
+                              className="h-8 text-xs"
+                            />
                             <Select
                               value={t.categoryId}
                               onValueChange={(v) => updateTransactionCategory(t.hash, v)}

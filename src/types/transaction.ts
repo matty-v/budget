@@ -1,4 +1,3 @@
-import type { Account } from './account'
 import type { Category } from './category'
 
 export type TransactionType = 'income' | 'expense' | 'transfer'
@@ -10,7 +9,7 @@ export interface Transaction {
   amount: number // Positive for income, negative for expense
   type: TransactionType
   category_id: string | null
-  source_account_id: string
+  source_account: string  // Free-text account name (e.g. "USAA Checking"). Was a UUID FK pre-#17.
   transfer_id: string | null
   plaid_transaction_id: string | null // For detecting duplicates on import
   notes: string
@@ -24,7 +23,7 @@ export interface TransactionFormData {
   amount: number
   type: TransactionType
   category_id: string | null
-  source_account_id: string
+  source_account: string
   notes: string
   plaid_transaction_id?: string | null // Optional, only for imports
 }
@@ -33,12 +32,14 @@ export interface TransferFormData {
   date: string
   description: string
   amount: number
-  from_account_id: string
-  to_account_id: string
+  from_account: string
+  to_account: string
   notes: string
 }
 
-// Row data as stored in Google Sheets (mostly strings, but API may return numbers)
+// Row data as stored in Google Sheets (mostly strings, but API may return numbers).
+// The sheet column is still named `source_account_id` for continuity — we just
+// interpret its string value as a name now instead of a UUID.
 export interface TransactionRow {
   id: string
   date: string
@@ -57,13 +58,12 @@ export interface TransactionRow {
 // For displaying transactions with joined data
 export interface TransactionWithDetails extends Transaction {
   category?: Category
-  account?: Account
 }
 
 export interface TransactionFilters {
   startDate?: string
   endDate?: string
-  accountId?: string
+  sourceAccount?: string  // substring match against Transaction.source_account
   categoryId?: string
   type?: TransactionType
 }

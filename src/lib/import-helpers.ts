@@ -41,7 +41,7 @@ export async function applyAutoCategorization(
     amount: t.type === 'expense' ? -Math.abs(t.amount) : Math.abs(t.amount),
     type: t.type,
     category_id: null, // Explicitly set to null for AI categorization
-    source_account_id: t.source_account_id,
+    source_account: t.source_account,
     transfer_id: null,
     plaid_transaction_id: t.plaid_transaction_id || null,
     notes: t.notes,

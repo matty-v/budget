@@ -116,6 +116,7 @@ export function DashboardPage() {
           <SpendingByCategory
             transactions={allTransactions ?? []}
             categories={categories ?? []}
+            yearMonth={yearMonth}
           />
         )}
         {transactionsLoading ? (

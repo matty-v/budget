@@ -8,7 +8,8 @@ interface OutliersProps {
   categories: Category[]
   yearMonth: string  // YYYY-MM
   topN?: number
-  trendBreakerRatio?: number  // How much above median = "breaking trend"
+  trendBreakerRatio?: number  // How much above median = "breaking trend" (categories)
+  unusualTxnRatio?: number  // How much above category median = "unusual" (transactions)
 }
 
 function median(values: number[]): number {
@@ -26,21 +27,68 @@ export function Outliers({
   yearMonth,
   topN = 8,
   trendBreakerRatio = 1.5,
+  unusualTxnRatio = 1.5,
 }: OutliersProps) {
   const categoryById = useMemo(
     () => new Map(categories.map((c) => [c.id, c])),
     [categories]
   )
 
-  // Top N single transactions for the selected period, ranked by abs(amount).
-  // Excludes transfers so intra-account moves don't dominate the list.
-  const topTransactions = useMemo(() => {
-    return transactions
-      .filter((t) => t.type !== 'transfer' && t.date.startsWith(yearMonth))
+  // "Unusual this month": txns in the selected period whose |amount| is at
+  // least `unusualTxnRatio` × the trailing-6-month median of |amount| for the
+  // same category. Silences recurring/predictable transactions (paychecks,
+  // rent, mortgage, subscriptions) that would otherwise dominate by sheer
+  // dollar size. Falls back to "always include" when history is too sparse
+  // to trust the median.
+  const unusualTransactions = useMemo(() => {
+    const [yearStr, monthStr] = yearMonth.split('-')
+    const year = Number(yearStr)
+    const month = Number(monthStr)
+
+    const pastMonths = new Set<string>()
+    for (let i = 1; i <= 6; i++) {
+      let y = year
+      let m = month - i
+      while (m <= 0) {
+        m += 12
+        y -= 1
+      }
+      pastMonths.add(`${y}-${String(m).padStart(2, '0')}`)
+    }
+
+    const UNCATEGORIZED = '__uncategorized__'
+    const MIN_HISTORY = 3
+
+    // Bucket trailing-6mo abs(amount)s by category id (uncategorized pooled).
+    const historyByBucket = new Map<string, number[]>()
+    for (const t of transactions) {
+      if (t.type === 'transfer') continue
+      const ym = t.date.slice(0, 7)
+      if (!pastMonths.has(ym)) continue
+      const bucket = t.category_id || UNCATEGORIZED
+      const arr = historyByBucket.get(bucket) ?? []
+      arr.push(Math.abs(t.amount))
+      historyByBucket.set(bucket, arr)
+    }
+
+    const candidates = transactions.filter(
+      (t) => t.type !== 'transfer' && t.date.startsWith(yearMonth)
+    )
+
+    const unusual = candidates.filter((t) => {
+      const bucket = t.category_id || UNCATEGORIZED
+      const history = historyByBucket.get(bucket) ?? []
+      if (history.length < MIN_HISTORY) return true
+      const med = median(history)
+      if (med <= 0) return true
+      return Math.abs(t.amount) / med >= unusualTxnRatio
+    })
+
+    return unusual
       .slice()
       .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
       .slice(0, topN)
-  }, [transactions, yearMonth, topN])
+  }, [transactions, yearMonth, topN, unusualTxnRatio])
 
   // Categories whose spend in the selected period is at least `ratio` × the
   // trailing 6-month median for that category. Median (not mean) so a single
@@ -104,7 +152,7 @@ export function Outliers({
     return rows.sort((a, b) => b.ratio - a.ratio)
   }, [transactions, categories, yearMonth, trendBreakerRatio])
 
-  const hasAnything = topTransactions.length > 0 || trendBreakers.length > 0
+  const hasAnything = unusualTransactions.length > 0 || trendBreakers.length > 0
 
   return (
     <Card className="flex flex-col h-full">
@@ -153,13 +201,13 @@ export function Outliers({
           </div>
         )}
 
-        {topTransactions.length > 0 && (
+        {unusualTransactions.length > 0 && (
           <div>
             <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-              Largest this month
+              Unusual this month
             </h3>
             <div className="space-y-1.5">
-              {topTransactions.map((t) => {
+              {unusualTransactions.map((t) => {
                 const cat = t.category_id ? categoryById.get(t.category_id) : undefined
                 const isExpense = t.amount < 0
                 return (

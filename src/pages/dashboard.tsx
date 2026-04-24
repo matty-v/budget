@@ -12,8 +12,10 @@ import {
   SpendingByCategory,
   IncomeExpenseChart,
   BudgetOverview,
+  Outliers,
   ChartCardSkeleton,
   BudgetOverviewSkeleton,
+  OutliersSkeleton,
 } from '@/components/dashboard'
 import { useTransactions } from '@/hooks/use-transactions'
 import { useCategories } from '@/hooks/use-categories'
@@ -106,15 +108,26 @@ export function DashboardPage() {
         )}
       </div>
 
-      {/* Spending by Category — full width below the hero row. */}
-      {transactionsLoading ? (
-        <ChartCardSkeleton height="h-48" />
-      ) : (
-        <SpendingByCategory
-          transactions={allTransactions ?? []}
-          categories={categories ?? []}
-        />
-      )}
+      {/* Detail row: Spending by Category + Outliers side-by-side on lg+. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {transactionsLoading ? (
+          <ChartCardSkeleton height="h-48" />
+        ) : (
+          <SpendingByCategory
+            transactions={allTransactions ?? []}
+            categories={categories ?? []}
+          />
+        )}
+        {transactionsLoading ? (
+          <OutliersSkeleton />
+        ) : (
+          <Outliers
+            transactions={allTransactions ?? []}
+            categories={categories ?? []}
+            yearMonth={yearMonth}
+          />
+        )}
+      </div>
     </div>
   )
 }
